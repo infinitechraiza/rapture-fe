@@ -24,9 +24,10 @@ const navSections = [
     label: "Manage",
     items: [
       { label: "Users", href: "/admin/users", icon: Users },
+      { label: "Comedians", href: "/admin/comedians", icon: Users },
       { label: "About", href: "/admin/about", icon: Info },
+      { label: "Events", href: "/admin/events", icon: Calendar },
       { label: "Reservation", href: "/admin/reservation", icon: CalendarCheck, count: 12 },
-      { label: "Calendar", href: "/admin/calendar", icon: Calendar },
     ],
   },
   {

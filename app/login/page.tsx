@@ -16,8 +16,6 @@ interface FormErrors {
   general?: string;
 }
 
-type DemoRole = "admin" | "user" | null;
-
 // ── Logo Icon ────────────────────────────────────────────────
 function LogoIcon() {
   return (
@@ -53,7 +51,6 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeDemo, setActiveDemo] = useState<DemoRole>(null);
 
   // ── Validation ─────────────────────────────────────────────
   const validate = (): boolean => {
@@ -70,17 +67,6 @@ export default function LoginPage() {
     }
     setErrors(next);
     return Object.keys(next).length === 0;
-  };
-
-  // ── Demo fill ──────────────────────────────────────────────
-  const handleDemoClick = (type: "admin" | "user") => {
-    setActiveDemo(type);
-    setErrors({});
-    if (type === "admin") {
-      setForm({ email: "admin@rapture.ph", password: "admin1234" });
-    } else {
-      setForm({ email: "user@rapture.ph", password: "user1234" });
-    }
   };
 
   // ── Submit ─────────────────────────────────────────────────
@@ -193,8 +179,6 @@ export default function LoginPage() {
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
         input::placeholder { color: rgba(255,255,255,0.2) !important; }
         input:focus { border-color: rgba(0,212,255,0.5) !important; box-shadow: 0 0 0 3px rgba(0,212,255,0.08) !important; }
-        .demo-btn-admin:hover { border-color: #00d4ff !important; color: #00d4ff !important; background: rgba(0,212,255,0.1) !important; }
-        .demo-btn-user:hover  { border-color: rgba(255,255,255,0.4) !important; color: #fff !important; background: rgba(255,255,255,0.07) !important; }
         .signin-btn:hover:not(:disabled) { box-shadow: 0 0 40px rgba(255,45,155,0.55), 0 0 60px rgba(0,212,255,0.25) !important; transform: translateY(-1px); }
         .signup-link { color: #00d4ff !important; transition: color 0.2s; }
         .signup-link:hover { color: #ff2d9b !important; }
@@ -315,68 +299,6 @@ export default function LoginPage() {
           >
             Sign in to access your dashboard
           </p>
-
-          {/* ── Demo buttons ── */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 12,
-              marginBottom: "1.5rem",
-            }}
-          >
-            <button
-              type="button"
-              className="demo-btn-admin"
-              onClick={() => handleDemoClick("admin")}
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 13,
-                fontWeight: 600,
-                padding: "10px 0",
-                borderRadius: 999,
-                border: "1px solid",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                background:
-                  activeDemo === "admin"
-                    ? "rgba(0,212,255,0.1)"
-                    : "transparent",
-                borderColor:
-                  activeDemo === "admin" ? "#00d4ff" : "rgba(0,212,255,0.4)",
-                color:
-                  activeDemo === "admin" ? "#00d4ff" : "rgba(0,212,255,0.75)",
-              }}
-            >
-              Admin Demo
-            </button>
-            <button
-              type="button"
-              className="demo-btn-user"
-              onClick={() => handleDemoClick("user")}
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 13,
-                fontWeight: 600,
-                padding: "10px 0",
-                borderRadius: 999,
-                border: "1px solid",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                background:
-                  activeDemo === "user"
-                    ? "rgba(255,255,255,0.07)"
-                    : "transparent",
-                borderColor:
-                  activeDemo === "user"
-                    ? "rgba(255,255,255,0.4)"
-                    : "rgba(255,255,255,0.15)",
-                color: activeDemo === "user" ? "#fff" : "rgba(255,255,255,0.5)",
-              }}
-            >
-              User Demo
-            </button>
-          </div>
 
           {/* ── Form ── */}
           <form
@@ -594,16 +516,6 @@ export default function LoginPage() {
                 </>
               )}
             </button>
-
-            <p
-              style={{
-                fontSize: 12,
-                color: "rgba(255,255,255,0.3)",
-                textAlign: "center",
-              }}
-            >
-              Use the demo buttons above to explore without credentials.
-            </p>
 
             <p
               style={{

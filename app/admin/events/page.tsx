@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Plus, X, Calendar, AlignLeft, Trash2, Users, Building2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Calendar, AlignLeft, Trash2, Clock } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -9,43 +9,27 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "#00d4ff",
-  confirmed: "#a855f7",
-  completed: "#10b981",
-  rejected: "#ff2d9b",
-  cancelled: "#f59e0b",
-};
-
-const STATUS_OPTIONS = ["pending", "confirmed", "completed", "rejected", "cancelled"] as const;
+const EVENT_COLORS = [
+  { value: "#00d4ff", label: "Blue" },
+  { value: "#a855f7", label: "Purple" },
+  { value: "#10b981", label: "Green" },
+  { value: "#ff2d9b", label: "Pink" },
+  { value: "#f59e0b", label: "Amber" },
+];
+const DEFAULT_COLOR = EVENT_COLORS[0].value;
 
 /* ─────────────────────────────────────────────
-   Types — mirrored from EventBooking model
+   Types — mirrored from the `events` table
 ───────────────────────────────────────────── */
-type Booking = {
+type CalendarEvent = {
   id: number;
-  venue_id: number;
-  venue?: { id: number; name: string };
-  check_in_date: string;
-  check_out_date: string;
-  is_single_day: boolean;
-  number_of_days: number;
-  number_of_nights: number;
-  expected_attendees: number;
-  needs_accommodation: boolean;
-  organization: string | null;
-  event_name: string | null;
-  contact_person: string;
-  position: string | null;
-  email: string;
-  phone: string;
-  details: string | null;
-  venue_price_per_day: number;
-  venue_total: number;
-  rooms_total: number;
-  grand_total: number;
-  status: keyof typeof STATUS_COLORS;
-  reference_number?: string;
+  user_id?: number | null;
+  title: string;
+  event_date: string;   // YYYY-MM-DD
+  start_time: string;   // HH:MM
+  end_time: string;     // HH:MM
+  color: string;
+  description: string | null;
 };
 
 function getDaysInMonth(year: number, month: number) {
@@ -54,13 +38,12 @@ function getDaysInMonth(year: number, month: number) {
 function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
-function toISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-function daysBetween(start: string, end: string) {
-  const s = new Date(start + "T00:00:00");
-  const e = new Date(end + "T00:00:00");
-  return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+function formatTime(t: string) {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 /* ─────────────────────────────────────────────
@@ -156,36 +139,24 @@ const labelStyle: React.CSSProperties = {
 const errMsg: React.CSSProperties = { fontSize: 11, color: "var(--neon-pink)", marginTop: 4 };
 
 /* ─────────────────────────────────────────────
-   Add New Event Modal — fields match EventBookingController@store
+   Add / Edit Event Modal — fields match EventController@store
 ───────────────────────────────────────────── */
-type NewEventForm = {
-  venue_id: string;
-  event_name: string;
-  organization: string;
-  check_in_date: string;
-  check_out_date: string;
-  expected_attendees: string;
-  contact_person: string;
-  position: string;
-  email: string;
-  phone: string;
-  details: string;
-  venue_price_per_day: string;
+type EventForm = {
+  title: string;
+  event_date: string;
+  start_time: string;
+  end_time: string;
+  color: string;
+  description: string;
 };
 
-const EMPTY_FORM: NewEventForm = {
-  venue_id: "",
-  event_name: "",
-  organization: "",
-  check_in_date: "",
-  check_out_date: "",
-  expected_attendees: "",
-  contact_person: "",
-  position: "",
-  email: "",
-  phone: "",
-  details: "",
-  venue_price_per_day: "",
+const EMPTY_FORM: EventForm = {
+  title: "",
+  event_date: "",
+  start_time: "",
+  end_time: "",
+  color: DEFAULT_COLOR,
+  description: "",
 };
 
 function NewEventModal({
@@ -194,33 +165,38 @@ function NewEventModal({
   onSubmit,
   submitting,
   serverError,
+  defaultDate,
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (form: NewEventForm) => Promise<boolean>;
+  onSubmit: (form: EventForm) => Promise<boolean>;
   submitting: boolean;
   serverError: string | null;
+  defaultDate?: string;
 }) {
-  const [form, setForm] = useState<NewEventForm>(EMPTY_FORM);
-  const [errors, setErrors] = useState<Partial<Record<keyof NewEventForm, string>>>({});
+  const [form, setForm] = useState<EventForm>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<keyof EventForm, string>>>({});
 
-  const set = (key: keyof NewEventForm, value: string) => {
+  useEffect(() => {
+    if (open) {
+      setForm((p) => ({ ...EMPTY_FORM, event_date: defaultDate ?? p.event_date }));
+      setErrors({});
+    }
+  }, [open, defaultDate]);
+
+  const set = (key: keyof EventForm, value: string) => {
     setForm((p) => ({ ...p, [key]: value }));
     if (errors[key]) setErrors((p) => ({ ...p, [key]: undefined }));
   };
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!form.venue_id.trim()) e.venue_id = "Venue ID is required.";
-    if (!form.check_in_date) e.check_in_date = "Check-in date is required.";
-    if (!form.check_out_date) e.check_out_date = "Check-out date is required.";
-    if (form.check_in_date && form.check_out_date && form.check_out_date < form.check_in_date)
-      e.check_out_date = "Check-out can't be before check-in.";
-    if (!form.expected_attendees.trim()) e.expected_attendees = "Expected attendees is required.";
-    if (!form.contact_person.trim()) e.contact_person = "Contact person is required.";
-    if (!form.email.trim()) e.email = "Email is required.";
-    if (!form.phone.trim()) e.phone = "Phone is required.";
-    if (!form.venue_price_per_day.trim()) e.venue_price_per_day = "Venue price/day is required.";
+    if (!form.title.trim()) e.title = "Title is required.";
+    if (!form.event_date) e.event_date = "Event date is required.";
+    if (!form.start_time) e.start_time = "Start time is required.";
+    if (!form.end_time) e.end_time = "End time is required.";
+    if (form.start_time && form.end_time && form.end_time <= form.start_time)
+      e.end_time = "End time must be after start time.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -241,7 +217,7 @@ function NewEventModal({
   };
 
   return (
-    <SlidePanel open={open} onClose={handleClose} width={480} glowColor="rgba(0,212,255,0.15)">
+    <SlidePanel open={open} onClose={handleClose} width={460} glowColor="rgba(0,212,255,0.15)">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div
@@ -255,7 +231,7 @@ function NewEventModal({
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-bright)" }}>
-              New Event Booking
+              New Event
             </h3>
             <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
               Saved directly to the database
@@ -289,139 +265,76 @@ function NewEventModal({
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Venue ID <span style={{ color: "var(--neon-pink)" }}>*</span></label>
-            <input
-              type="number"
-              value={form.venue_id}
-              onChange={(e) => set("venue_id", e.target.value)}
-              placeholder="e.g. 1"
-              style={errors.venue_id ? inputErr : inputBase}
-            />
-            {errors.venue_id && <p style={errMsg}>{errors.venue_id}</p>}
-          </div>
-          <div>
-            <label style={labelStyle}>Venue Price / Day <span style={{ color: "var(--neon-pink)" }}>*</span></label>
-            <input
-              type="number"
-              value={form.venue_price_per_day}
-              onChange={(e) => set("venue_price_per_day", e.target.value)}
-              placeholder="0.00"
-              style={errors.venue_price_per_day ? inputErr : inputBase}
-            />
-            {errors.venue_price_per_day && <p style={errMsg}>{errors.venue_price_per_day}</p>}
-          </div>
-        </div>
-
         <div>
-          <label style={labelStyle}>Event Name</label>
+          <label style={labelStyle}>Title <span style={{ color: "var(--neon-pink)" }}>*</span></label>
           <input
             type="text"
-            value={form.event_name}
-            onChange={(e) => set("event_name", e.target.value)}
-            placeholder="e.g. Annual Sales Conference"
-            style={inputBase}
+            value={form.title}
+            onChange={(e) => set("title", e.target.value)}
+            placeholder="e.g. Team standup"
+            style={errors.title ? inputErr : inputBase}
           />
+          {errors.title && <p style={errMsg}>{errors.title}</p>}
         </div>
 
         <div>
-          <label style={labelStyle}>Organization</label>
+          <label style={labelStyle}>Date <span style={{ color: "var(--neon-pink)" }}>*</span></label>
           <input
-            type="text"
-            value={form.organization}
-            onChange={(e) => set("organization", e.target.value)}
-            placeholder="e.g. Acme Corp"
-            style={inputBase}
+            type="date"
+            value={form.event_date}
+            onChange={(e) => set("event_date", e.target.value)}
+            style={{ ...(errors.event_date ? inputErr : inputBase), colorScheme: "dark" }}
           />
+          {errors.event_date && <p style={errMsg}>{errors.event_date}</p>}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
-            <label style={labelStyle}>Check-in <span style={{ color: "var(--neon-pink)" }}>*</span></label>
+            <label style={labelStyle}>Start Time <span style={{ color: "var(--neon-pink)" }}>*</span></label>
             <input
-              type="date"
-              value={form.check_in_date}
-              onChange={(e) => set("check_in_date", e.target.value)}
-              style={{ ...(errors.check_in_date ? inputErr : inputBase), colorScheme: "dark" }}
+              type="time"
+              value={form.start_time}
+              onChange={(e) => set("start_time", e.target.value)}
+              style={{ ...(errors.start_time ? inputErr : inputBase), colorScheme: "dark" }}
             />
-            {errors.check_in_date && <p style={errMsg}>{errors.check_in_date}</p>}
+            {errors.start_time && <p style={errMsg}>{errors.start_time}</p>}
           </div>
           <div>
-            <label style={labelStyle}>Check-out <span style={{ color: "var(--neon-pink)" }}>*</span></label>
+            <label style={labelStyle}>End Time <span style={{ color: "var(--neon-pink)" }}>*</span></label>
             <input
-              type="date"
-              value={form.check_out_date}
-              onChange={(e) => set("check_out_date", e.target.value)}
-              style={{ ...(errors.check_out_date ? inputErr : inputBase), colorScheme: "dark" }}
+              type="time"
+              value={form.end_time}
+              onChange={(e) => set("end_time", e.target.value)}
+              style={{ ...(errors.end_time ? inputErr : inputBase), colorScheme: "dark" }}
             />
-            {errors.check_out_date && <p style={errMsg}>{errors.check_out_date}</p>}
+            {errors.end_time && <p style={errMsg}>{errors.end_time}</p>}
           </div>
         </div>
 
         <div>
-          <label style={labelStyle}>Expected Attendees <span style={{ color: "var(--neon-pink)" }}>*</span></label>
-          <div style={{ position: "relative" }}>
-            <Users size={13} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-            <input
-              type="number"
-              value={form.expected_attendees}
-              onChange={(e) => set("expected_attendees", e.target.value)}
-              placeholder="e.g. 80"
-              style={{ ...(errors.expected_attendees ? inputErr : inputBase), paddingLeft: 32 }}
-            />
-          </div>
-          {errors.expected_attendees && <p style={errMsg}>{errors.expected_attendees}</p>}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Contact Person <span style={{ color: "var(--neon-pink)" }}>*</span></label>
-            <input
-              type="text"
-              value={form.contact_person}
-              onChange={(e) => set("contact_person", e.target.value)}
-              style={errors.contact_person ? inputErr : inputBase}
-            />
-            {errors.contact_person && <p style={errMsg}>{errors.contact_person}</p>}
-          </div>
-          <div>
-            <label style={labelStyle}>Position</label>
-            <input
-              type="text"
-              value={form.position}
-              onChange={(e) => set("position", e.target.value)}
-              style={inputBase}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Email <span style={{ color: "var(--neon-pink)" }}>*</span></label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => set("email", e.target.value)}
-              style={errors.email ? inputErr : inputBase}
-            />
-            {errors.email && <p style={errMsg}>{errors.email}</p>}
-          </div>
-          <div>
-            <label style={labelStyle}>Phone <span style={{ color: "var(--neon-pink)" }}>*</span></label>
-            <input
-              type="text"
-              value={form.phone}
-              onChange={(e) => set("phone", e.target.value)}
-              style={errors.phone ? inputErr : inputBase}
-            />
-            {errors.phone && <p style={errMsg}>{errors.phone}</p>}
+          <label style={labelStyle}>Color</label>
+          <div style={{ display: "flex", gap: 10 }}>
+            {EVENT_COLORS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => set("color", c.value)}
+                title={c.label}
+                style={{
+                  width: 32, height: 32, borderRadius: "50%", cursor: "pointer",
+                  background: c.value,
+                  border: form.color === c.value ? "2px solid var(--text-bright)" : "2px solid transparent",
+                  boxShadow: form.color === c.value ? `0 0 10px ${c.value}` : "none",
+                  outline: "none",
+                }}
+              />
+            ))}
           </div>
         </div>
 
         <div>
           <label style={labelStyle}>
-            Details
+            Description
             <span style={{ marginLeft: 6, color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
               — optional
             </span>
@@ -430,8 +343,8 @@ function NewEventModal({
             <AlignLeft size={13} style={{ position: "absolute", left: 12, top: 12, color: "var(--text-muted)" }} />
             <textarea
               rows={3}
-              value={form.details}
-              onChange={(e) => set("details", e.target.value)}
+              value={form.description}
+              onChange={(e) => set("description", e.target.value)}
               placeholder="Add notes for this event…"
               style={{ ...inputBase, paddingLeft: 32, resize: "none", lineHeight: 1.6 }}
             />
@@ -469,24 +382,24 @@ function NewEventModal({
 }
 
 /* ─────────────────────────────────────────────
-   Day Detail Panel — view / update status / delete
+   Day Detail Panel — view / delete
 ───────────────────────────────────────────── */
 function DayDetailPanel({
   open,
   onClose,
   date,
-  bookings,
+  events,
   onDelete,
-  onStatusChange,
   busyId,
+  onAddForDay,
 }: {
   open: boolean;
   onClose: () => void;
   date: string;
-  bookings: Booking[];
+  events: CalendarEvent[];
   onDelete: (id: number) => void;
-  onStatusChange: (id: number, status: string) => void;
   busyId: number | null;
+  onAddForDay: () => void;
 }) {
   return (
     <SlidePanel open={open} onClose={onClose} width={440} glowColor="rgba(168,85,247,0.15)">
@@ -496,7 +409,7 @@ function DayDetailPanel({
             {date}
           </h3>
           <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
-            {bookings.length} booking{bookings.length !== 1 ? "s" : ""}
+            {events.length} event{events.length !== 1 ? "s" : ""}
           </p>
         </div>
         <button
@@ -511,82 +424,65 @@ function DayDetailPanel({
         </button>
       </div>
 
+      <button
+        onClick={onAddForDay}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          width: "100%", padding: "10px 0", marginBottom: 18, borderRadius: 10, cursor: "pointer",
+          background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.25)",
+          color: "var(--neon-blue)", fontSize: 12, fontWeight: 700,
+        }}
+      >
+        <Plus size={13} /> Add event on this day
+      </button>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {bookings.map((b) => {
-          const color = STATUS_COLORS[b.status] ?? "#00d4ff";
-          const busy = busyId === b.id;
-          return (
-            <div
-              key={b.id}
-              style={{
-                padding: 16, borderRadius: 14,
-                background: "rgba(0,0,0,0.25)",
-                border: `1px solid ${color}33`,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                <div>
+        {events
+          .slice()
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+          .map((ev) => {
+            const color = ev.color || DEFAULT_COLOR;
+            const busy = busyId === ev.id;
+            return (
+              <div
+                key={ev.id}
+                style={{
+                  padding: 16, borderRadius: 14,
+                  background: "rgba(0,0,0,0.25)",
+                  border: `1px solid ${color}33`,
+                  borderLeft: `3px solid ${color}`,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text-bright)" }}>
-                    {b.event_name || b.organization || b.contact_person}
+                    {ev.title}
                   </p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-                    {b.reference_number ?? `#${b.id}`} · {b.check_in_date} → {b.check_out_date}
-                  </p>
+                  <button
+                    disabled={busy}
+                    onClick={() => onDelete(ev.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600,
+                      padding: "5px 9px", borderRadius: 8, cursor: "pointer", flexShrink: 0,
+                      background: "rgba(255,45,155,0.1)", border: "1px solid rgba(255,45,155,0.3)",
+                      color: "var(--neon-pink)", opacity: busy ? 0.5 : 1,
+                    }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </div>
-                <span
-                  style={{
-                    fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 50,
-                    background: `${color}22`, color, textTransform: "uppercase", letterSpacing: 0.5, flexShrink: 0,
-                  }}
-                >
-                  {b.status}
-                </span>
-              </div>
 
-              <div style={{ display: "flex", gap: 14, marginTop: 10, fontSize: 11, color: "var(--text-soft)" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <Building2 size={12} /> Venue #{b.venue_id}
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <Users size={12} /> {b.expected_attendees}
-                </span>
-              </div>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-soft)", display: "flex", alignItems: "center", gap: 5 }}>
+                  <Clock size={12} /> {formatTime(ev.start_time)} – {formatTime(ev.end_time)}
+                </p>
 
-              <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-                {b.contact_person} · {b.email} · {b.phone}
-              </p>
-
-              <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
-                <select
-                  value={b.status}
-                  disabled={busy}
-                  onChange={(e) => onStatusChange(b.id, e.target.value)}
-                  style={{
-                    flex: 1, fontSize: 11, padding: "6px 8px", borderRadius: 8,
-                    background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)",
-                    color: "var(--text-soft)",
-                  }}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                <button
-                  disabled={busy}
-                  onClick={() => onDelete(b.id)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600,
-                    padding: "6px 10px", borderRadius: 8, cursor: "pointer",
-                    background: "rgba(255,45,155,0.1)", border: "1px solid rgba(255,45,155,0.3)",
-                    color: "var(--neon-pink)", opacity: busy ? 0.5 : 1,
-                  }}
-                >
-                  <Trash2 size={12} /> Delete
-                </button>
+                {ev.description && (
+                  <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                    {ev.description}
+                  </p>
+                )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </SlidePanel>
   );
@@ -600,13 +496,14 @@ export default function CalendarPage() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
 
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
 
   const [activeDay, setActiveDay] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -615,40 +512,36 @@ export default function CalendarPage() {
   const firstDay = getFirstDayOfMonth(year, month);
   const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
 
-  // ── Fetch bookings whenever the visible month changes ──
-  const loadBookings = useCallback(async () => {
+  // ── Fetch events for the visible month ──
+  const loadEvents = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch(`/api/event?per_page=200`, { cache: "no-store" });
+      const res = await fetch(`/api/event?year=${year}&month=${month + 1}&per_page=200`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || data.success === false) {
         throw new Error(data.message || "Failed to load events.");
       }
-      const list: Booking[] = data.data?.data ?? data.data ?? [];
-      setBookings(list);
+      const list: CalendarEvent[] = data.data?.data ?? data.data ?? [];
+      setEvents(list);
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "Failed to load events.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [year, month]);
 
   useEffect(() => {
-    loadBookings();
-  }, [loadBookings, year, month]);
+    loadEvents();
+  }, [loadEvents]);
 
-  // ── Group bookings by day-of-month for the currently displayed month ──
-  const eventsByDay: Record<number, Booking[]> = {};
-  for (const b of bookings) {
-    const start = new Date(b.check_in_date + "T00:00:00");
-    const end = new Date(b.check_out_date + "T00:00:00");
-    // Mark every day the booking spans that falls within the visible month
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const day = d.getDate();
-        (eventsByDay[day] ||= []).push(b);
-      }
+  // ── Group events by day-of-month ──
+  const eventsByDay: Record<number, CalendarEvent[]> = {};
+  for (const ev of events) {
+    const d = new Date(ev.event_date + "T00:00:00");
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const day = d.getDate();
+      (eventsByDay[day] ||= []).push(ev);
     }
   }
 
@@ -664,36 +557,21 @@ export default function CalendarPage() {
   const isToday = (day: number) =>
     day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
+  const isoDate = (day: number) =>
+    `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
   // ── CREATE ──
-  const handleSubmit = async (form: NewEventForm): Promise<boolean> => {
+  const handleSubmit = async (form: EventForm): Promise<boolean> => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const days = daysBetween(form.check_in_date, form.check_out_date);
-      const isSingleDay = form.check_in_date === form.check_out_date;
-      const pricePerDay = parseFloat(form.venue_price_per_day) || 0;
-      const venueTotal = pricePerDay * days;
-
       const payload = {
-        venue_id: Number(form.venue_id),
-        check_in_date: form.check_in_date,
-        check_out_date: form.check_out_date,
-        is_single_day: isSingleDay,
-        number_of_days: days,
-        number_of_nights: isSingleDay ? 0 : days - 1,
-        expected_attendees: Number(form.expected_attendees),
-        needs_accommodation: false,
-        organization: form.organization || null,
-        event_name: form.event_name || null,
-        contact_person: form.contact_person,
-        position: form.position || null,
-        email: form.email,
-        phone: form.phone,
-        details: form.details || null,
-        venue_price_per_day: pricePerDay,
-        venue_total: venueTotal,
-        rooms_total: 0,
-        grand_total: venueTotal,
+        title: form.title,
+        event_date: form.event_date,
+        start_time: form.start_time,
+        end_time: form.end_time,
+        color: form.color || DEFAULT_COLOR,
+        description: form.description || null,
       };
 
       const res = await fetch("/api/event", {
@@ -711,7 +589,7 @@ export default function CalendarPage() {
         throw new Error(msg);
       }
 
-      await loadBookings();
+      await loadEvents();
       setShowModal(false);
       return true;
     } catch (err) {
@@ -724,34 +602,15 @@ export default function CalendarPage() {
 
   // ── DELETE ──
   const handleDelete = async (id: number) => {
-    if (!confirm("Delete this booking? This cannot be undone.")) return;
+    if (!confirm("Delete this event? This cannot be undone.")) return;
     setBusyId(id);
     try {
       const res = await fetch(`/api/event/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok || data.success === false) throw new Error(data.message || "Failed to delete.");
-      setBookings((prev) => prev.filter((b) => b.id !== id));
+      setEvents((prev) => prev.filter((e) => e.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete booking.");
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  // ── UPDATE STATUS ──
-  const handleStatusChange = async (id: number, status: string) => {
-    setBusyId(id);
-    try {
-      const res = await fetch(`/api/event/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.success === false) throw new Error(data.message || "Failed to update status.");
-      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: status as Booking["status"] } : b)));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status.");
+      alert(err instanceof Error ? err.message : "Failed to delete event.");
     } finally {
       setBusyId(null);
     }
@@ -773,7 +632,7 @@ export default function CalendarPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { setModalDefaultDate(undefined); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
           style={{
             background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
@@ -841,7 +700,15 @@ export default function CalendarPage() {
                   background: isValid ? (isToday(day) ? "rgba(0,212,255,0.1)" : "transparent") : "transparent",
                   border: isToday(day) ? "1px solid rgba(0,212,255,0.4)" : "1px solid transparent",
                 }}
-                onClick={() => isValid && dayEvents?.length && setActiveDay(day)}
+                onClick={() => {
+                  if (!isValid) return;
+                  if (dayEvents?.length) {
+                    setActiveDay(day);
+                  } else {
+                    setModalDefaultDate(isoDate(day));
+                    setShowModal(true);
+                  }
+                }}
                 onMouseEnter={(e) => {
                   if (isValid && !isToday(day)) (e.currentTarget as HTMLDivElement).style.background = "rgba(0,212,255,0.04)";
                 }}
@@ -856,15 +723,15 @@ export default function CalendarPage() {
                     </p>
                     {dayEvents && dayEvents.length > 0 && (
                       <div className="mt-0.5 space-y-0.5">
-                        {dayEvents.slice(0, 3).map((b) => {
-                          const color = STATUS_COLORS[b.status] ?? "#00d4ff";
+                        {dayEvents.slice(0, 3).map((ev) => {
+                          const color = ev.color || DEFAULT_COLOR;
                           return (
                             <div
-                              key={b.id}
+                              key={ev.id}
                               className="text-xs px-1 py-0.5 rounded truncate"
                               style={{ background: `${color}22`, color, fontSize: "9px" }}
                             >
-                              {b.event_name || b.organization || b.contact_person}
+                              {ev.title}
                             </div>
                           );
                         })}
@@ -889,16 +756,21 @@ export default function CalendarPage() {
         onSubmit={handleSubmit}
         submitting={submitting}
         serverError={submitError}
+        defaultDate={modalDefaultDate}
       />
 
       <DayDetailPanel
         open={activeDay !== null}
         onClose={() => setActiveDay(null)}
         date={activeDayLabel}
-        bookings={activeDayEvents}
+        events={activeDayEvents}
         onDelete={handleDelete}
-        onStatusChange={handleStatusChange}
         busyId={busyId}
+        onAddForDay={() => {
+          if (activeDay) setModalDefaultDate(isoDate(activeDay));
+          setActiveDay(null);
+          setShowModal(true);
+        }}
       />
     </div>
   );

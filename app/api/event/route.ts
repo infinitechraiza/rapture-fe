@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const token = getAuthToken(request)
     const body = await request.json()
 
-    const res = await fetch(`${API_URL}/api/event-`, {
+    const res = await fetch(`${API_URL}/api/event`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
