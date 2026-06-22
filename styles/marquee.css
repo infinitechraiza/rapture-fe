@@ -1,0 +1,43 @@
+ /* NEON MARQUEE */
+  .marquee-wrap {
+    overflow: hidden;
+    padding: 16px 0;
+    border-top: 1px solid rgba(0,212,255,0.1);
+    border-bottom: 1px solid rgba(0,212,255,0.1);
+    background: rgba(16, 146, 153, 0.2);
+  }
+
+  .marquee-track {
+    display: flex;
+    gap: 60px;
+    white-space: nowrap;
+    animation: marquee 20s linear infinite;
+    width: max-content;
+  }
+
+  .marquee-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .marquee-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--neon-pink); }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+
+
+   /* NEON DIVIDER */
+  .neon-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-blue), var(--neon-pink), transparent);
+    margin: 0;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }

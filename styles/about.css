@@ -1,0 +1,121 @@
+
+  /* ==================== ABOUT ==================== */
+  #about {
+    padding: 120px 48px;
+  }
+
+  .about-inner {
+    max-width: 1300px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 100px;
+    align-items: center;
+  }
+
+  .about-visual {
+    position: relative;
+  }
+
+  .about-img-main {
+    width: 100%;
+    height: 520px;
+    border-radius: 20px;
+    object-fit: cover;
+    border: 1px solid rgba(255,45,155,0.2);
+    box-shadow: 0 0 60px rgba(255,45,155,0.1);
+    display: block;
+    background: linear-gradient(135deg, #1a0a2e, #0a1a3e);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .about-img-placeholder {
+    width: 100%;
+    height: 520px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,45,155,0.2);
+    box-shadow: 0 0 60px rgba(255,45,155,0.1);
+    background: linear-gradient(135deg, #1a0a2e 0%, #0a1a3e 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .about-img-placeholder::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(255,45,155,0.15) 0%, transparent 50%),
+      radial-gradient(circle at 70% 60%, rgba(0,212,255,0.1) 0%, transparent 50%);
+  }
+
+  .about-placeholder-icon {
+    font-size: 80px;
+    filter: drop-shadow(0 0 20px rgba(255,45,155,0.5));
+    position: relative;
+    z-index: 1;
+  }
+
+  .about-placeholder-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--neon-pink), var(--neon-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+    z-index: 1;
+  }
+
+  .about-float-card {
+    position: absolute;
+    bottom: -24px;
+    right: -24px;
+    background: var(--card-dark);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 16px;
+    padding: 20px 24px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 30px rgba(0,212,255,0.2);
+  }
+
+  .afc-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px;
+    color: var(--neon-blue);
+    text-shadow: 0 0 20px var(--neon-blue);
+    line-height: 1;
+  }
+
+  .afc-label { font-size: 12px; color: var(--text-muted); letter-spacing: 1px; margin-top: 4px; }
+
+  .about-values {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 40px;
+  }
+
+  .value-card {
+    padding: 20px;
+    background: var(--card-dark);
+    border: 1px solid var(--border-blue);
+    border-radius: 14px;
+    transition: all 0.3s;
+  }
+
+  .value-card:hover {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 20px rgba(0,212,255,0.15);
+    transform: translateY(-2px);
+  }
+
+  .value-icon { font-size: 28px; margin-bottom: 10px; }
+  .value-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .value-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
