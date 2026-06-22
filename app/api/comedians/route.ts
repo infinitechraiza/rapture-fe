@@ -1,6 +1,6 @@
-import { getApiUrl } from '@/lib/api-url'
-
-import { NextRequest, NextResponse } from "next/server";
+import { getApiUrl } from "@/lib/api-url";
+import { cookies } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,35 +19,38 @@ export async function GET(req: NextRequest) {
     });
 
     const data = await res.json();
-
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
     console.error("GET /api/comedians error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch comedians" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await request.json();
+    const token = (await cookies()).get("auth_token")?.value;
 
-    const res = await fetch(`${getApiUrl()}/api/comedians`, {
+    const response = await fetch(`${getApiUrl()}/api/comedians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
-
-    return NextResponse.json(data, { status: res.status });
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error("POST /api/comedians error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to create comedian" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

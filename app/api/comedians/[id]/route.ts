@@ -2,51 +2,31 @@ import { getApiUrl } from "@/lib/api-url";
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    const { searchParams } = new URL(req.url);
-    const params = new URLSearchParams();
+    const { id } = await params;
+    const body = await request.json();
+    const token = (await cookies()).get("auth_token")?.value;
 
-    const search = searchParams.get("search");
-    const status = searchParams.get("status");
-
-    if (search) params.append("search", search);
-    if (status) params.append("status", status);
-
-    const res = await fetch(`${getApiUrl()}/api/comedians?${params}`, {
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-
-    return NextResponse.json(data, { status: res.status });
-  } catch (error) {
-    console.error("GET /api/comedians error:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch comedians" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-
-    const res = await fetch(`${getApiUrl()}/api/comedians`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const response = await fetch(`${getApiUrl()}/api/comedians/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
-
-    return NextResponse.json(data, { status: res.status });
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("POST /api/comedians error:", error);
+    console.error("PUT /api/comedians/[id] error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to create comedian" },
+      { success: false, message: "Failed to update comedian" },
       { status: 500 },
     );
   }
@@ -54,12 +34,13 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const token = (await cookies()).get("auth_token")?.value;
 
-    const response = await fetch(`${getApiUrl()}/api/comedians/${params.id}`, {
+    const response = await fetch(`${getApiUrl()}/api/comedians/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -68,10 +49,9 @@ export async function DELETE(
     });
 
     const data = await response.json();
-
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error("DELETE /api/comedians error:", error);
+    console.error("DELETE /api/comedians/[id] error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to delete comedian" },
       { status: 500 },
