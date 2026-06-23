@@ -44,7 +44,7 @@ async function sendEmails({
     <tr><td style="height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.3),transparent);padding:0;"></td></tr>
     <tr>
       <td align="center" style="padding:28px 40px;">
-        <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,0.2);">© ${new Date().getFullYear()} MDS Dental & Aesthetic Clinic · Mon–Sat: 9AM–7PM</p>
+        <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,0.2);">© ${new Date().getFullYear()} Rapture Commedy Bar & Cafe · Mon–Sat: 9AM–7PM</p>
         <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.2);">This is an automated message — please do not reply.</p>
       </td>
     </tr>`;
@@ -71,7 +71,7 @@ async function sendEmails({
               <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#0099cc);display:inline-block;vertical-align:middle;"></div>
             </div>
             <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#00d4ff;">Appointment</p>
-            <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:36px;font-weight:700;color:#ffffff;letter-spacing:1px;">MDS Dental</h1>
+            <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:36px;font-weight:700;color:#ffffff;letter-spacing:1px;">Rapture Commedy Bar & Cafe</h1>
             <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.4);">& Aesthetic Clinic</p>
           </td>
         </tr>
@@ -154,13 +154,13 @@ async function sendEmails({
 
   // ── Admin email ─────────────────────────────────────────────
   await transporter.sendMail({
-    from: `"MDS Dental System" <${process.env.SMTP_USER}>`,
+    from: `"Rapture Commedy Bar & Cafe System" <${process.env.SMTP_USER}>`,
     to: adminEmail,
     subject: `New Appointment — ${name}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>New Appointment – MDS Dental</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>New Appointment – Rapture Commedy Bar & Cafe</title></head>
 <body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#070b14;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#070b14;padding:40px 20px;">
     <tr><td align="center">
@@ -174,7 +174,7 @@ async function sendEmails({
               <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#0099cc);display:inline-block;vertical-align:middle;"></div>
             </div>
             <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#00d4ff;">New Booking</p>
-            <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:36px;font-weight:700;color:#ffffff;letter-spacing:1px;">MDS Dental</h1>
+            <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:36px;font-weight:700;color:#ffffff;letter-spacing:1px;">Rapture Commedy Bar & Cafe</h1>
             <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.4);">Admin Notification</p>
           </td>
         </tr>

@@ -1,129 +1,62 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getApiUrl } from "@/lib/api-url"
-
-const API_URL = getApiUrl()
+import { getApiUrl } from "@/lib/api-url";
+import { cookies } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 
 function getAuthToken(request: NextRequest): string | null {
-  // Try Authorization header first, then fall back to cookie
-  const authHeader = request.headers.get("authorization")
-  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7)
-  return request.cookies.get("token")?.value ?? null
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+
+  return (
+    request.cookies.get("token")?.value ??
+    request.cookies.get("auth_token")?.value ??
+    null
+  );
 }
 
-// GET ALL /api/event
-export async function GET(request: NextRequest) {
+// GET /api/event/[id]
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const token = getAuthToken(request)
-    const { searchParams } = new URL(request.url)
+    const token = getAuthToken(request);
+    const { id } = context.params;
 
-    const params = new URLSearchParams()
-    for (const key of ["status", "email", "venue_id", "search", "per_page", "page", "year", "month", "start_date", "end_date"]) {
-      const val = searchParams.get(key)
-      if (val) params.set(key, val)
-    }
-
-    const res = await fetch(`${API_URL}/api/event?${params.toString()}`, {
+    const res = await fetch(`${getApiUrl()}/api/event/${id}`, {
       method: "GET",
       headers: {
         Accept: "application/json",
         Authorization: token ? `Bearer ${token}` : "",
       },
       cache: "no-store",
-    })
+    });
 
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (err) {
-    console.error("GET /api/event error:", err)
+    console.error("GET /api/event/[id] error:", err);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: "Failed to fetch event booking.", 
-        error: err instanceof Error ? err.message : "Unknown error"
+      {
+        success: false,
+        message: "Failed to fetch event.",
+        error: err instanceof Error ? err.message : "Unknown error",
       },
       { status: 500 }
-    )
+    );
   }
 }
 
-// POST /api/event
-export async function POST(request: NextRequest) {
+// PUT /api/event/[id]
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const token = getAuthToken(request)
-    const body = await request.json()
+    const token = getAuthToken(request);
+    const { id } = context.params;
+    const body = await request.json();
 
-    console.log("POST /api/event payload:", body)
-
-    const res = await fetch(`${API_URL}/api/event`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-      body: JSON.stringify(body),
-    })
-
-    const data = await res.json()
-
-    console.log("POST /api/event response:", {
-      status: res.status,
-      data: data,
-    })
-
-    // Always return the backend response, even if it's an error
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    console.error("POST /api/event error:", err)
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: "Failed to submit event booking.", 
-        error: err instanceof Error ? err.message : "Unknown error"
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// GET /api/event/{id}
-export async function GET_BY_ID(request: NextRequest, context: any) {
-  try {
-    const token = getAuthToken(request)
-    const { id } = context.params
-
-    const res = await fetch(`${API_URL}/api/event/${id}`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-      cache: "no-store",
-    })
-
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    console.error("GET /api/event/{id} error:", err)
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: "Failed to fetch event.", 
-        error: err instanceof Error ? err.message : "Unknown error"
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// PUT/PATCH /api/event/{id}
-export async function PUT(request: NextRequest, context: any) {
-  try {
-    const token = getAuthToken(request)
-    const { id } = context.params
-    const body = await request.json()
-
-    const res = await fetch(`${API_URL}/api/event/${id}`, {
+    const res = await fetch(`${getApiUrl()}/api/event/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -131,48 +64,47 @@ export async function PUT(request: NextRequest, context: any) {
         Authorization: token ? `Bearer ${token}` : "",
       },
       body: JSON.stringify(body),
-    })
+    });
 
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (err) {
-    console.error("PUT /api/event/{id} error:", err)
+    console.error("PUT /api/event/[id] error:", err);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: "Failed to update event.", 
-        error: err instanceof Error ? err.message : "Unknown error"
+      {
+        success: false,
+        message: "Failed to update event.",
+        error: err instanceof Error ? err.message : "Unknown error",
       },
       { status: 500 }
-    )
+    );
   }
 }
 
-// DELETE /api/event/{id}
-export async function DELETE(request: NextRequest, context: any) {
+// DELETE /api/event/[id]
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    const token = getAuthToken(request)
-    const { id } = context.params
+    const { id } = await params;
+    const token = (await cookies()).get("auth_token")?.value;
 
-    const res = await fetch(`${API_URL}/api/event/${id}`, {
+    const response = await fetch(`${getApiUrl()}/api/event/${id}`, {
       method: "DELETE",
       headers: {
+        Authorization: `Bearer ${token}`,
         Accept: "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
       },
-    })
+    });
 
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    console.error("DELETE /api/event/{id} error:", err)
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error("DELETE /api/event/[id] error:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: "Failed to delete event.", 
-        error: err instanceof Error ? err.message : "Unknown error"
-      },
-      { status: 500 }
-    )
+      { success: false, message: "Failed to delete comedian" },
+      { status: 500 },
+    );
   }
 }

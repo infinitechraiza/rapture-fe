@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -42,13 +43,13 @@ const DEFAULT_COLOR = EVENT_COLORS[0].value;
 type CalendarEvent = {
   id: number;
   user_id?: number | null;
+  comedians?: Comedian[];
   title: string;
   event_date: string;
   start_time: string;
   end_time: string;
   color: string;
   description: string | null;
-  comedians?: Comedian[];
 };
 
 type Comedian = {
@@ -143,10 +144,7 @@ function SlidePanel({
           from { transform: translateX(100%); opacity: 0.6; }
           to   { transform: translateX(0);    opacity: 1;   }
         }
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
     </div>
   );
@@ -201,8 +199,10 @@ function ComedianMultiSelect({
   onSelectAll: (selectAll: boolean) => void;
   error?: string;
 }) {
-  const allSelected = comedians.length > 0 && selectedIds.length === comedians.length;
-  const someSelected = selectedIds.length > 0 && selectedIds.length < comedians.length;
+  const allSelected =
+    comedians.length > 0 && selectedIds.length === comedians.length;
+  const someSelected =
+    selectedIds.length > 0 && selectedIds.length < comedians.length;
 
   return (
     <div>
@@ -222,7 +222,6 @@ function ComedianMultiSelect({
           </span>
         )}
       </label>
-
       {loading ? (
         <div
           style={{
@@ -278,7 +277,10 @@ function ComedianMultiSelect({
               cursor: "pointer",
               textAlign: "left",
               border: "1px solid rgba(0,212,255,0.3)",
-              background: allSelected || someSelected ? "rgba(0,212,255,0.15)" : "rgba(0,0,0,0.2)",
+              background:
+                allSelected || someSelected
+                  ? "rgba(0,212,255,0.15)"
+                  : "rgba(0,0,0,0.2)",
               transition: "background 0.15s, border-color 0.15s",
             }}
           >
@@ -291,13 +293,16 @@ function ComedianMultiSelect({
                 alignItems: "center",
                 justifyContent: "center",
                 border: "1px solid rgba(0,212,255,0.3)",
-                background: allSelected || someSelected
-                  ? "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))"
-                  : "transparent",
                 flexShrink: 0,
+                background:
+                  allSelected || someSelected
+                    ? "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))"
+                    : "transparent",
               }}
             >
-              {(allSelected || someSelected) && <Check size={12} style={{ color: "white" }} />}
+              {(allSelected || someSelected) && (
+                <Check size={12} style={{ color: "white" }} />
+              )}
             </div>
             <p
               style={{
@@ -311,7 +316,6 @@ function ComedianMultiSelect({
               {allSelected ? "Deselect All" : "Select All"}
             </p>
           </button>
-
           <div
             style={{
               display: "flex",
@@ -379,7 +383,6 @@ function ComedianMultiSelect({
                       {getInitials(c.name)}
                     </div>
                   )}
-
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p
                       style={{
@@ -409,7 +412,6 @@ function ComedianMultiSelect({
                       </p>
                     )}
                   </div>
-
                   <div
                     style={{
                       width: 18,
@@ -419,7 +421,9 @@ function ComedianMultiSelect({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      border: checked ? "none" : "1px solid rgba(0,212,255,0.3)",
+                      border: checked
+                        ? "none"
+                        : "1px solid rgba(0,212,255,0.3)",
                       background: checked
                         ? "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))"
                         : "transparent",
@@ -477,7 +481,6 @@ function NewEventModal({
   const [errors, setErrors] = useState<
     Partial<Record<keyof EventForm, string>>
   >({});
-
   const [comedians, setComedians] = useState<Comedian[]>([]);
   const [comediansLoading, setComediansLoading] = useState(false);
   const [comediansError, setComediansError] = useState<string | null>(null);
@@ -495,31 +498,27 @@ function NewEventModal({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-
     (async () => {
       setComediansLoading(true);
       setComediansError(null);
       try {
-        const res = await fetch("/api/comedians?status=active", {
+        const res = await fetch("/api/comedians?status=active&per_page=200", {
           cache: "no-store",
         });
         const data = await res.json();
-        if (!res.ok || data.success === false) {
+        if (!res.ok || data.success === false)
           throw new Error(data.message || "Failed to load comedians.");
-        }
         const list: Comedian[] = data.data?.data ?? data.data ?? [];
         if (!cancelled) setComedians(list);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled)
           setComediansError(
             err instanceof Error ? err.message : "Failed to load comedians.",
           );
-        }
       } finally {
         if (!cancelled) setComediansLoading(false);
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -529,18 +528,16 @@ function NewEventModal({
     setForm((p) => ({ ...p, [key]: value }));
     if (errors[key]) setErrors((p) => ({ ...p, [key]: undefined }));
   };
-
   const toggleComedian = (id: number) => {
     setForm((p) => ({
       ...p,
       comedian_ids: p.comedian_ids.includes(id)
-        ? p.comedian_ids.filter((existing) => existing !== id)
+        ? p.comedian_ids.filter((e) => e !== id)
         : [...p.comedian_ids, id],
     }));
     if (errors.comedian_ids)
       setErrors((p) => ({ ...p, comedian_ids: undefined }));
   };
-
   const handleSelectAll = (selectAll: boolean) => {
     setForm((p) => ({
       ...p,
@@ -550,20 +547,20 @@ function NewEventModal({
       setErrors((p) => ({ ...p, comedian_ids: undefined }));
   };
 
+  // FIXED: validate end_time is strictly AFTER start_time
   const validate = () => {
     const e: typeof errors = {};
     if (!form.title.trim()) e.title = "Title is required.";
     if (!form.event_date) e.event_date = "Event date is required.";
     if (!form.start_time) e.start_time = "Start time is required.";
     if (!form.end_time) e.end_time = "End time is required.";
-    if (form.start_time && form.end_time && form.end_time <= form.start_time)
+    if (form.end_time <= form.start_time)
       e.end_time = "End time must be after start time.";
     if (form.comedian_ids.length === 0)
       e.comedian_ids = "Select at least one comedian.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
 
   const handleSubmit = async () => {
     if (!validate()) return;
@@ -573,7 +570,6 @@ function NewEventModal({
       setErrors({});
     }
   };
-
   const handleClose = () => {
     setForm(EMPTY_FORM);
     setErrors({});
@@ -644,7 +640,6 @@ function NewEventModal({
           <X size={14} />
         </button>
       </div>
-
       <div
         style={{
           height: 1,
@@ -652,7 +647,6 @@ function NewEventModal({
           marginBottom: 24,
         }}
       />
-
       {serverError && (
         <div
           style={{
@@ -668,7 +662,6 @@ function NewEventModal({
           {serverError}
         </div>
       )}
-
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <label style={labelStyle}>
@@ -678,12 +671,11 @@ function NewEventModal({
             type="text"
             value={form.title}
             onChange={(e) => set("title", e.target.value)}
-            placeholder="e.g. Team standup"
+            placeholder="e.g. Comedy Night"
             style={errors.title ? inputErr : inputBase}
           />
           {errors.title && <p style={errMsg}>{errors.title}</p>}
         </div>
-
         <div>
           <label style={labelStyle}>
             Date <span style={{ color: "var(--neon-pink)" }}>*</span>
@@ -699,7 +691,6 @@ function NewEventModal({
           />
           {errors.event_date && <p style={errMsg}>{errors.event_date}</p>}
         </div>
-
         <div
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
         >
@@ -734,7 +725,6 @@ function NewEventModal({
             {errors.end_time && <p style={errMsg}>{errors.end_time}</p>}
           </div>
         </div>
-
         <ComedianMultiSelect
           comedians={comedians}
           loading={comediansLoading}
@@ -744,7 +734,6 @@ function NewEventModal({
           onSelectAll={handleSelectAll}
           error={errors.comedian_ids as string | undefined}
         />
-
         <div>
           <label style={labelStyle}>Color</label>
           <div style={{ display: "flex", gap: 10 }}>
@@ -772,10 +761,9 @@ function NewEventModal({
             ))}
           </div>
         </div>
-
         <div>
           <label style={labelStyle}>
-            Description
+            Description{" "}
             <span
               style={{
                 marginLeft: 6,
@@ -813,7 +801,6 @@ function NewEventModal({
           </div>
         </div>
       </div>
-
       <div style={{ marginTop: 28, display: "flex", gap: 10 }}>
         <button
           onClick={handleClose}
@@ -923,7 +910,6 @@ function DayDetailPanel({
           <X size={14} />
         </button>
       </div>
-
       <button
         onClick={onAddForDay}
         style={{
@@ -945,7 +931,6 @@ function DayDetailPanel({
       >
         <Plus size={13} /> Add event on this day
       </button>
-
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {events
           .slice()
@@ -1004,7 +989,6 @@ function DayDetailPanel({
                     <Trash2 size={12} />
                   </button>
                 </div>
-
                 <p
                   style={{
                     margin: "6px 0 0",
@@ -1018,7 +1002,7 @@ function DayDetailPanel({
                   <Clock size={12} /> {formatTime(ev.start_time)} –{" "}
                   {formatTime(ev.end_time)}
                 </p>
-
+                {/* Comedians from event_comedian pivot */}
                 {ev.comedians && ev.comedians.length > 0 && (
                   <div
                     style={{
@@ -1044,13 +1028,11 @@ function DayDetailPanel({
                           border: "1px solid rgba(0,212,255,0.2)",
                         }}
                       >
-                        <Users size={10} />
-                        {c.name}
+                        <Users size={10} /> {c.name}
                       </span>
                     ))}
                   </div>
                 )}
-
                 {ev.description && (
                   <p
                     style={{
@@ -1072,21 +1054,19 @@ function DayDetailPanel({
 }
 
 export default function CalendarPage() {
+  const { toast } = useToast();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(
     undefined,
   );
-
   const [activeDay, setActiveDay] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
@@ -1103,30 +1083,45 @@ export default function CalendarPage() {
         { cache: "no-store" },
       );
       const data = await res.json();
-      if (!res.ok || data.success === false) {
+      if (!res.ok || data.success === false)
         throw new Error(data.message || "Failed to load events.");
-      }
-      const list: CalendarEvent[] = data.data?.data ?? data.data ?? [];
+
+      // Handles both paginated ({ data: { data: [...] } }) and flat ({ data: [...] }) shapes
+      const list: CalendarEvent[] = Array.isArray(data.data?.data)
+        ? data.data.data
+        : Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data)
+            ? data
+            : [];
+
       setEvents(list);
     } catch (err) {
-      setFetchError(
-        err instanceof Error ? err.message : "Failed to load events.",
-      );
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to load events.";
+      setFetchError(errorMsg);
+      toast({
+        title: "Error loading events",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, toast]);
 
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
 
+  // Timezone-safe date grouping — split the string, never use new Date()
   const eventsByDay: Record<number, CalendarEvent[]> = {};
   for (const ev of events) {
-    const d = new Date(ev.event_date + "T00:00:00");
-    if (d.getFullYear() === year && d.getMonth() === month) {
-      const day = d.getDate();
-      (eventsByDay[day] ||= []).push(ev);
+    if (!ev.event_date) continue;
+    const parts = ev.event_date.split("T")[0].split("-").map(Number); // handles "2026-06-22" and "2026-06-22T00:00:00"
+    const [evYear, evMonth, evDay] = parts;
+    if (evYear === year && evMonth === month + 1) {
+      (eventsByDay[evDay] ||= []).push(ev);
     }
   }
 
@@ -1136,6 +1131,7 @@ export default function CalendarPage() {
       setYear((y) => y - 1);
     } else setMonth((m) => m - 1);
   };
+
   const nextMonth = () => {
     if (month === 11) {
       setMonth(0);
@@ -1147,7 +1143,6 @@ export default function CalendarPage() {
     day === today.getDate() &&
     month === today.getMonth() &&
     year === today.getFullYear();
-
   const isoDate = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
@@ -1156,36 +1151,42 @@ export default function CalendarPage() {
     setSubmitError(null);
     try {
       const payload = {
+        comedian_ids: form.comedian_ids,
         title: form.title,
         event_date: form.event_date,
         start_time: form.start_time,
         end_time: form.end_time,
         color: form.color || DEFAULT_COLOR,
         description: form.description || null,
-        comedian_ids: form.comedian_ids,
       };
-
       const res = await fetch("/api/event", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-
       if (!res.ok || data.success === false) {
         const msg = data.errors
           ? Object.values(data.errors).flat().join(" ")
           : data.message || "Failed to create event.";
         throw new Error(msg);
       }
-
+      toast({
+        title: "Event created!",
+        description: `${form.title} has been added to your calendar.`,
+      });
       await loadEvents();
       setShowModal(false);
       return true;
     } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : "Failed to create event.",
-      );
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to create event.";
+      setSubmitError(errorMsg);
+      toast({
+        title: "Failed to create event",
+        description: errorMsg,
+        variant: "destructive",
+      });
       return false;
     } finally {
       setSubmitting(false);
@@ -1201,8 +1202,24 @@ export default function CalendarPage() {
       if (!res.ok || data.success === false)
         throw new Error(data.message || "Failed to delete.");
       setEvents((prev) => prev.filter((e) => e.id !== id));
+      if (activeDay !== null) {
+        const remaining = (eventsByDay[activeDay] ?? []).filter(
+          (e) => e.id !== id,
+        );
+        if (remaining.length === 0) setActiveDay(null);
+      }
+      toast({
+        title: "Event deleted",
+        description: "The event has been removed from your calendar.",
+      });
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete event.");
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to delete event.";
+      toast({
+        title: "Failed to delete event",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setBusyId(null);
     }
@@ -1215,6 +1232,12 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6 flex-1 overflow-y-auto p-6 min-h-screen">
+      <style>{`
+        .event-pill { position: relative; }
+        .event-pill .delete-btn { opacity: 0; transition: opacity 0.15s; }
+        .event-pill:hover .delete-btn { opacity: 1; }
+      `}</style>
+
       <div className="flex items-center justify-between">
         <div>
           <h1
@@ -1240,8 +1263,7 @@ export default function CalendarPage() {
             boxShadow: "0 0 16px rgba(0,212,255,0.3)",
           }}
         >
-          <Plus size={14} />
-          New Event
+          <Plus size={14} /> New Event
         </button>
       </div>
 
@@ -1309,7 +1331,7 @@ export default function CalendarPage() {
             return (
               <div
                 key={i}
-                className={`min-h-[60px] p-1 rounded-lg transition-all duration-200 ${isValid ? "cursor-pointer" : ""}`}
+                className={`min-h-[72px] p-1 rounded-lg transition-all duration-200 ${isValid ? "cursor-pointer" : ""}`}
                 style={{
                   background: isValid
                     ? isToday(day)
@@ -1322,9 +1344,8 @@ export default function CalendarPage() {
                 }}
                 onClick={() => {
                   if (!isValid) return;
-                  if (dayEvents?.length) {
-                    setActiveDay(day);
-                  } else {
+                  if (dayEvents?.length) setActiveDay(day);
+                  else {
                     setModalDefaultDate(isoDate(day));
                     setShowModal(true);
                   }
@@ -1356,26 +1377,81 @@ export default function CalendarPage() {
                       <div className="mt-0.5 space-y-0.5">
                         {dayEvents.slice(0, 3).map((ev) => {
                           const color = ev.color || DEFAULT_COLOR;
+                          const isBusy = busyId === ev.id;
                           return (
                             <div
                               key={ev.id}
-                              className="text-xs px-1 py-0.5 rounded truncate"
+                              className="event-pill"
                               style={{
+                                display: "flex",
+                                alignItems: "center",
                                 background: `${color}22`,
-                                color,
-                                fontSize: "9px",
+                                borderRadius: 4,
+                                opacity: isBusy ? 0.4 : 1,
+                                transition: "opacity 0.2s",
                               }}
                             >
-                              {ev.title}
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveDay(day);
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: "2px 4px",
+                                  fontSize: "9px",
+                                  color,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  cursor: "pointer",
+                                  minWidth: 0,
+                                }}
+                              >
+                                {ev.title}
+                              </span>
+                              <button
+                                className="delete-btn"
+                                disabled={isBusy}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(ev.id);
+                                }}
+                                style={{
+                                  flexShrink: 0,
+                                  width: 14,
+                                  height: 14,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  background: "rgba(255,45,155,0.25)",
+                                  border: "none",
+                                  borderRadius: 3,
+                                  cursor: "pointer",
+                                  color: "#ff2d9b",
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  padding: 0,
+                                  marginRight: 2,
+                                }}
+                                title="Delete event"
+                              >
+                                ×
+                              </button>
                             </div>
                           );
                         })}
                         {dayEvents.length > 3 && (
                           <div
-                            className="text-xs px-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveDay(day);
+                            }}
                             style={{
                               fontSize: "9px",
                               color: "var(--text-muted)",
+                              paddingLeft: 4,
+                              cursor: "pointer",
                             }}
                           >
                             +{dayEvents.length - 3} more
