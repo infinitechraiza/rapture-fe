@@ -167,7 +167,19 @@ export function Header() {
   }, []);
 
   return (
-    <header className="site-header sticky top-0 z-50">
+    <header
+      className="site-header sticky top-0 z-50"
+      style={{
+        // Forces this header into its own top-level stacking context
+        // with a very high z-index, so no descendant of any sibling
+        // section (e.g. a hero canvas) can ever paint above it,
+        // regardless of that section's own internal z-index values.
+        isolation: "isolate",
+        zIndex: 9999,
+        position: "sticky",
+        top: 0,
+      }}
+    >
       <nav className="nav flex items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href="/"
@@ -406,8 +418,6 @@ export function Header() {
           </div>
         </div>
       )}
-
-    
     </header>
   );
 }

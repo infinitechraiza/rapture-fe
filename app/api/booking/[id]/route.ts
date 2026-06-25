@@ -14,7 +14,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params
 
-    const res = await fetch(`${getApiUrl()}/api/bookings/${id}`, {
+    const res = await fetch(`${getApiUrl()}/api/booking/${id}`, {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -32,6 +32,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     )
   }
 }
+
+
 
 // UPDATE
 export async function PUT(request: NextRequest, { params }: Params) {

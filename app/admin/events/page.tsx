@@ -554,8 +554,7 @@ function NewEventModal({
     if (!form.event_date) e.event_date = "Event date is required.";
     if (!form.start_time) e.start_time = "Start time is required.";
     if (!form.end_time) e.end_time = "End time is required.";
-    if (form.end_time <= form.start_time)
-      e.end_time = "End time must be after start time.";
+ 
     if (form.comedian_ids.length === 0)
       e.comedian_ids = "Select at least one comedian.";
     setErrors(e);

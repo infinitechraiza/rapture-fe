@@ -13,8 +13,8 @@ import {
   Stethoscope,
   User,
   Sparkles,
+  Mail,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -34,7 +34,6 @@ const MONTHS = [
   "December",
 ];
 
-/* ───── Status config ───── */
 const STATUS_CONFIG: Record<
   string,
   { color: string; bg: string; border: string }
@@ -73,7 +72,9 @@ const STATUS_CONFIG: Record<
 
 interface Booking {
   id?: number | string;
+  full_name?: string;
   audience_name?: string;
+  email?: string;
   audience_email?: string;
   phone?: string;
   scheduled_at?: string | null;
@@ -81,7 +82,6 @@ interface Booking {
   notes?: string;
 }
 
-/* ───── Status Badge ───── */
 function StatusBadge({ status }: { status?: string }) {
   const cfg = STATUS_CONFIG[status as string] || STATUS_CONFIG.pending;
   return (
@@ -114,7 +114,6 @@ function StatusBadge({ status }: { status?: string }) {
   );
 }
 
-/* ───── Section Card ───── */
 function SectionCard({
   title,
   icon,
@@ -176,7 +175,6 @@ function SectionCard({
   );
 }
 
-/* ───── Helpers ───── */
 function parseDateTime(date: string, time?: string) {
   if (!time) return new Date(`${date}T00:00:00`);
   if (/^\d{2}:\d{2}/.test(time)) return new Date(`${date}T${time}`);
@@ -197,12 +195,6 @@ function formatDisplayDate(dateStr: string) {
   });
 }
 
-/* ───── Slide-in Panel Shell ─────
-   Shared right-docked, full-height drawer used by both modals.
-   - Fixed overlay dims the page
-   - Panel slides in from the right edge, spans full viewport height
-   - Panel content scrolls internally if it overflows
-*/
 function SlidePanel({
   open,
   onClose,
@@ -225,7 +217,6 @@ function SlidePanel({
         zIndex: 50,
       }}
     >
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -236,7 +227,6 @@ function SlidePanel({
           animation: "fade-in 0.2s ease",
         }}
       />
-      {/* Panel */}
       <div
         className="card-neon"
         style={{
@@ -281,7 +271,6 @@ function SlidePanel({
   );
 }
 
-/* ───── Action Modal ───── */
 type ActionModalState = {
   open: boolean;
   type: string | null;
@@ -306,6 +295,10 @@ function ActionModal({
   const accent = isApprove ? "var(--neon-blue)" : "var(--neon-pink)";
   const accentBg = isApprove ? "rgba(0,212,255,0.12)" : "rgba(255,45,155,0.12)";
 
+  // Get email for the booking
+  const clientEmail =
+    modal.booking.email || modal.booking.audience_email || "N/A";
+
   return (
     <SlidePanel
       open={modal.open}
@@ -313,7 +306,6 @@ function ActionModal({
       width={440}
       glowColor={isApprove ? "rgba(0,212,255,0.15)" : "rgba(255,45,155,0.15)"}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -371,7 +363,7 @@ function ActionModal({
         </button>
       </div>
 
-      {/* Summary */}
+      {/* Booking Details */}
       <div
         style={{
           background: "rgba(0,0,0,0.25)",
@@ -386,12 +378,23 @@ function ActionModal({
       >
         {(
           [
-            ["Name", modal.booking.audience_name],
-            ["Email", modal.booking.audience_email],
+            ["Email", clientEmail],
             [
               "Date",
               modal.booking.scheduled_at
                 ? new Date(modal.booking.scheduled_at).toLocaleDateString()
+                : "—",
+            ],
+            [
+              "Time",
+              modal.booking.scheduled_at
+                ? new Date(modal.booking.scheduled_at).toLocaleTimeString(
+                    "en-US",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )
                 : "—",
             ],
           ] as [string, string | undefined][]
@@ -403,8 +406,12 @@ function ActionModal({
                 letterSpacing: 2,
                 textTransform: "uppercase",
                 color: "var(--text-muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
               }}
             >
+              {label === "Email" && <Mail size={10} />}
               {label}
             </span>
             <div
@@ -412,10 +419,11 @@ function ActionModal({
                 fontSize: 13,
                 color: "var(--text-bright)",
                 fontWeight: 600,
-                marginTop: 2,
+                marginTop: 4,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                whiteSpace: label === "Email" ? "normal" : "nowrap",
+                wordBreak: "break-all",
               }}
             >
               {val || "—"}
@@ -424,7 +432,7 @@ function ActionModal({
         ))}
       </div>
 
-      {/* Note */}
+      {/* Notes / Message */}
       <div style={{ marginBottom: 20 }}>
         <label
           style={{
@@ -441,17 +449,12 @@ function ActionModal({
           <span style={{ color: "var(--neon-pink)" }}>*</span>
         </label>
         <textarea
-          rows={3}
+          rows={6}
           value={modal.notes}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={
-            isApprove
-              ? "We are pleased to confirm your appointment…"
-              : "Unfortunately we are unable to accommodate your requested time…"
-          }
           style={{
             width: "100%",
-            padding: "10px 14px",
+            padding: "12px 14px",
             background: "rgba(0,0,0,0.3)",
             border: `1px solid ${accent}40`,
             borderRadius: 10,
@@ -461,36 +464,53 @@ function ActionModal({
             outline: "none",
             boxSizing: "border-box",
             fontFamily: "var(--app-font-sans)",
+            lineHeight: 1.5,
           }}
         />
+        <div
+          style={{
+            fontSize: 10,
+            color: "var(--text-muted)",
+            marginTop: 6,
+            textAlign: "right",
+          }}
+        >
+          {modal.notes.length} characters
+        </div>
       </div>
 
+      {/* Action Buttons */}
       <div style={{ display: "flex", gap: 10 }}>
         <button
           onClick={onClose}
           disabled={modal.submitting}
           style={{
             flex: 1,
-            padding: "10px 0",
+            padding: "12px 0",
             borderRadius: 10,
-            cursor: "pointer",
+            cursor: modal.submitting ? "not-allowed" : "pointer",
             background: "transparent",
             border: "1px solid rgba(0,212,255,0.2)",
             color: "var(--text-soft)",
             fontSize: 13,
             fontWeight: 600,
+            opacity: modal.submitting ? 0.5 : 1,
+            transition: "all 0.2s",
           }}
         >
           Cancel
         </button>
         <button
           onClick={onSubmit}
-          disabled={modal.submitting}
+          disabled={modal.submitting || !modal.notes.trim()}
           style={{
             flex: 1,
-            padding: "10px 0",
+            padding: "12px 0",
             borderRadius: 10,
-            cursor: "pointer",
+            cursor:
+              modal.submitting || !modal.notes.trim()
+                ? "not-allowed"
+                : "pointer",
             border: "none",
             background: `linear-gradient(135deg, ${isApprove ? "var(--neon-blue), var(--neon-purple)" : "var(--neon-pink), var(--neon-purple)"})`,
             color: "#fff",
@@ -498,7 +518,8 @@ function ActionModal({
             fontWeight: 700,
             letterSpacing: 1,
             boxShadow: `0 0 20px ${isApprove ? "rgba(0,212,255,0.3)" : "rgba(255,45,155,0.3)"}`,
-            opacity: modal.submitting ? 0.5 : 1,
+            opacity: modal.submitting || !modal.notes.trim() ? 0.5 : 1,
+            transition: "all 0.2s",
           }}
         >
           {modal.submitting
@@ -512,810 +533,6 @@ function ActionModal({
   );
 }
 
-/* ───── New Booking Modal helpers (calendar grid, time formatting) ───── */
-function buildAdminCalendarGrid(year: number, month: number) {
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const daysInPrev = new Date(year, month, 0).getDate();
-  const cells: { date: Date; current: boolean }[] = [];
-  for (let i = firstDay - 1; i >= 0; i--)
-    cells.push({
-      date: new Date(year, month - 1, daysInPrev - i),
-      current: false,
-    });
-  for (let d = 1; d <= daysInMonth; d++)
-    cells.push({ date: new Date(year, month, d), current: true });
-  const remaining = 42 - cells.length;
-  for (let d = 1; d <= remaining; d++)
-    cells.push({ date: new Date(year, month + 1, d), current: false });
-  return cells;
-}
-
-function isPastDay(date: Date) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d < today;
-}
-
-function formatAdminDate(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-const ADMIN_TIME_SLOTS = [
-  "9:00 AM",
-  "9:30 AM",
-  "10:00 AM",
-  "10:30 AM",
-  "11:00 AM",
-  "11:30 AM",
-  "1:00 PM",
-  "1:30 PM",
-  "2:00 PM",
-  "2:30 PM",
-  "3:00 PM",
-  "3:30 PM",
-  "4:00 PM",
-  "4:30 PM",
-];
-
-function formatAdminTimeTo24(time: string) {
-  const [tv, mod] = time.split(" ");
-  let [h, m] = tv.split(":").map(Number);
-  if (mod === "PM" && h < 12) h += 12;
-  if (mod === "AM" && h === 12) h = 0;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-const adminSlideVariants = {
-  enter: (dir: number) => ({ x: dir > 0 ? 40 : -40, opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit: (dir: number) => ({ x: dir > 0 ? -40 : 40, opacity: 0 }),
-};
-
-const ADMIN_BOOKING_STEPS = [
-  { num: 1, label: "Date", icon: Calendar },
-  { num: 2, label: "Time", icon: Clock },
-  { num: 3, label: "Patient", icon: User },
-  { num: 4, label: "Confirm", icon: Sparkles },
-];
-
-const ADMIN_MONTHS = MONTHS;
-const ADMIN_DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-/* ───── New Booking Modal ───── */
-function NewBookingModal({
-  open,
-  onClose,
-  onSuccess,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  type FormState = {
-    name: string;
-    email: string;
-    phone: string;
-    notes: string;
-  };
-  const [form, setForm] = useState<FormState>({
-    name: "",
-    email: "",
-    phone: "",
-    notes: "",
-  });
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [step, setStep] = useState(1);
-  const [dir, setDir] = useState(1);
-  const [done, setDone] = useState(false);
-
-  const today = new Date();
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-
-  const calendarCells = buildAdminCalendarGrid(viewYear, viewMonth);
-
-  if (!open) return null;
-
-  function go(next: number) {
-    setDir(next > step ? 1 : -1);
-    setStep(next);
-    setError("");
-  }
-  function prevMonth() {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((y) => y - 1);
-    } else setViewMonth((m) => m - 1);
-  }
-  function nextMonth() {
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((y) => y + 1);
-    } else setViewMonth((m) => m + 1);
-  }
-
-  const step1Valid = !!selectedDate;
-  const step2Valid = !!selectedTime;
-  const step3Valid = !!form.name && !!form.email && !!form.phone;
-  const canProceed = [step1Valid, step2Valid, step3Valid, true][step - 1];
-
-  const handleSubmit = async () => {
-    if (!form.name || !form.email || !selectedDate || !selectedTime) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/booking`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          audience_name: form.name,
-          audience_email: form.email,
-          phone: form.phone,
-          date: formatAdminDate(selectedDate),
-          time: formatAdminTimeTo24(selectedTime),
-          notes: form.notes,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Failed to create booking.");
-      setDone(true);
-      onSuccess();
-    } catch (err: any) {
-      setError(err?.message || String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleNext = () => {
-    if (!canProceed) return;
-    if (step < 4) go(step + 1);
-    else handleSubmit();
-  };
-
-  const handleClose = () => {
-    setForm({ name: "", email: "", phone: "", notes: "" });
-    setSelectedDate(null);
-    setSelectedTime("");
-    setStep(1);
-    setDir(1);
-    setError("");
-    setDone(false);
-    onClose();
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 14px",
-    background: "rgba(0,0,0,0.3)",
-    border: "1px solid rgba(0,212,255,0.2)",
-    borderRadius: 10,
-    color: "var(--text-bright)",
-    fontSize: 13,
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "var(--app-font-sans)",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: "var(--text-muted)",
-    marginBottom: 6,
-  };
-
-  /* ── Success view (replaces the panel body once booking is created) ── */
-  if (done) {
-    return (
-      <SlidePanel open={open} onClose={handleClose} width={460} glowColor="rgba(0,212,255,0.15)">
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            textAlign: "center",
-            padding: "16px 0",
-          }}
-        >
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              background: "rgba(0,212,255,0.12)",
-              border: "1px solid rgba(0,212,255,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 16,
-              boxShadow: "0 0 30px rgba(0,212,255,0.25)",
-            }}
-          >
-            <CheckCircle size={28} style={{ color: "var(--neon-blue)" }} />
-          </div>
-          <h4
-            style={{
-              margin: "0 0 8px",
-              fontSize: 17,
-              fontWeight: 700,
-              color: "var(--text-bright)",
-            }}
-          >
-            Booking Created!
-          </h4>
-          <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--text-muted)" }}>
-            Appointment scheduled for{" "}
-            {selectedDate?.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}{" "}
-            at {selectedTime}
-          </p>
-          <div
-            style={{
-              background: "rgba(0,0,0,0.25)",
-              border: "1px solid rgba(0,212,255,0.15)",
-              borderRadius: 12,
-              padding: 16,
-              width: "100%",
-              marginBottom: 20,
-            }}
-          >
-            {[
-              ["Patient", form.name],
-              ["Email", form.email],
-              ["Date", selectedDate ? formatAdminDate(selectedDate) : "—"],
-              ["Time", selectedTime],
-            ].map(([label, val]) => (
-              <div
-                key={label}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "6px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: 2,
-                    textTransform: "uppercase",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  {label}
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-bright)" }}>
-                  {val}
-                </span>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={handleClose}
-            style={{
-              width: "100%",
-              padding: "12px 0",
-              borderRadius: 10,
-              background: "linear-gradient(135deg,var(--neon-blue),var(--neon-purple))",
-              border: "none",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: 1,
-              cursor: "pointer",
-              boxShadow: "0 0 20px rgba(0,212,255,0.3)",
-            }}
-          >
-            Done
-          </button>
-        </div>
-      </SlidePanel>
-    );
-  }
-
-  /* ── Step 1: Date ── */
-  const Step1 = (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={prevMonth}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 8,
-            background: "transparent",
-            border: "1px solid rgba(0,212,255,0.15)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-muted)",
-          }}
-        >
-          <ChevronLeft size={14} />
-        </button>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-bright)" }}>
-          {ADMIN_MONTHS[viewMonth]} {viewYear}
-        </span>
-        <button
-          onClick={nextMonth}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 8,
-            background: "transparent",
-            border: "1px solid rgba(0,212,255,0.15)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-muted)",
-          }}
-        >
-          <ChevronRight size={14} />
-        </button>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
-        {ADMIN_DAYS_SHORT.map((d) => (
-          <div
-            key={d}
-            style={{
-              textAlign: "center",
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: 1,
-              textTransform: "uppercase",
-              color: "var(--neon-pink)",
-              opacity: 0.5,
-              padding: "4px 0",
-            }}
-          >
-            {d}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
-        {calendarCells.map((cell, i) => {
-          const past = cell.current ? isPastDay(cell.date) : true;
-          const isSel = selectedDate?.toDateString() === cell.date.toDateString();
-          const isToday = cell.date.toDateString() === today.toDateString();
-          const disabled = !cell.current || past;
-          return (
-            <button
-              key={i}
-              disabled={disabled}
-              onClick={() => !disabled && setSelectedDate(cell.date)}
-              style={{
-                position: "relative",
-                width: 34,
-                height: 34,
-                margin: "0 auto",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-                opacity: !cell.current ? 0.15 : past ? 0.25 : 1,
-                cursor: disabled ? "not-allowed" : "pointer",
-                background: isSel
-                  ? "linear-gradient(135deg,var(--neon-blue),var(--neon-purple))"
-                  : "transparent",
-                border: isSel
-                  ? "none"
-                  : isToday
-                    ? "1px solid var(--neon-blue)"
-                    : "1px solid transparent",
-                color: isSel ? "#fff" : isToday ? "var(--neon-blue)" : "var(--text-soft)",
-                fontWeight: isSel || isToday ? 700 : 400,
-                boxShadow: isSel ? "0 0 14px rgba(0,212,255,0.4)" : "none",
-              }}
-            >
-              {cell.date.getDate()}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  /* ── Step 2: Time ── */
-  const Step2 = (
-    <div>
-      {selectedDate && (
-        <div
-          className="card-neon"
-          style={{ marginBottom: 16, padding: "10px 14px", fontSize: 13 }}
-        >
-          <span style={{ color: "var(--text-muted)" }}>Selected: </span>
-          <span style={{ color: "var(--text-bright)", fontWeight: 600 }}>
-            {selectedDate.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-          </span>
-        </div>
-      )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {ADMIN_TIME_SLOTS.map((t) => {
-          const isSel = selectedTime === t;
-          return (
-            <button
-              key={t}
-              onClick={() => setSelectedTime(t)}
-              style={{
-                padding: "10px 8px",
-                borderRadius: 10,
-                fontSize: 13,
-                fontWeight: isSel ? 700 : 500,
-                cursor: "pointer",
-                background: isSel
-                  ? "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))"
-                  : "rgba(0,212,255,0.05)",
-                border: isSel ? "none" : "1px solid rgba(0,212,255,0.15)",
-                color: isSel ? "#fff" : "var(--text-soft)",
-                boxShadow: isSel
-                  ? "0 0 16px rgba(0,212,255,0.3), 0 0 30px rgba(255,45,155,0.15)"
-                  : "none",
-              }}
-            >
-              {t}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  /* ── Step 3: Patient info ── */
-  const Step3 = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div>
-          <label style={labelStyle}>Full Name *</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            placeholder="Juan dela Cruz"
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Email *</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-            placeholder="juan@example.com"
-            style={inputStyle}
-          />
-        </div>
-      </div>
-      <div>
-        <label style={labelStyle}>Phone *</label>
-        <input
-          type="tel"
-          value={form.phone}
-          onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-          placeholder="+63 912 345 6789"
-          style={inputStyle}
-        />
-      </div>
-      <div>
-        <label style={labelStyle}>Notes</label>
-        <textarea
-          rows={2}
-          value={form.notes}
-          onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-          placeholder="Any additional notes…"
-          style={{ ...inputStyle, resize: "none" }}
-        />
-      </div>
-    </div>
-  );
-
-  /* ── Step 4: Confirm ── */
-  const Step4 = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 6px" }}>
-        Review the appointment before creating it.
-      </p>
-      {[
-        {
-          label: "Date",
-          value: selectedDate?.toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          }),
-        },
-        { label: "Time", value: selectedTime },
-        { label: "Name", value: form.name },
-        { label: "Email", value: form.email },
-        { label: "Phone", value: form.phone },
-      ].map(({ label, value }) => (
-        <div
-          key={label}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "10px 14px",
-            borderRadius: 10,
-            background: "rgba(0,0,0,0.25)",
-            border: "1px solid rgba(0,212,255,0.12)",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 10,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              color: "var(--text-muted)",
-            }}
-          >
-            {label}
-          </span>
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--text-bright)",
-              maxWidth: "60%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              textAlign: "right",
-            }}
-          >
-            {value || "—"}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-
-  const stepBodies = [Step1, Step2, Step3, Step4];
-
-  return (
-    <SlidePanel open={open} onClose={handleClose} width={500} glowColor="rgba(0,212,255,0.12)">
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 4,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Calendar size={17} style={{ color: "var(--neon-blue)" }} />
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-bright)" }}>
-            New Booking
-          </h3>
-        </div>
-        <button
-          onClick={handleClose}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 8,
-            background: "transparent",
-            border: "1px solid rgba(0,212,255,0.15)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-muted)",
-          }}
-        >
-          <XCircle size={14} />
-        </button>
-      </div>
-
-      {/* Step indicators */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 4,
-          margin: "18px 0 4px",
-          flexWrap: "wrap",
-        }}
-      >
-        {ADMIN_BOOKING_STEPS.map((s, idx) => {
-          const isDone = step > s.num;
-          const curr = step === s.num;
-          const Icon = s.icon;
-          return (
-            <div key={s.num} style={{ display: "flex", alignItems: "center" }}>
-              <button
-                onClick={() => isDone && go(s.num)}
-                disabled={!isDone && !curr}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 4,
-                  background: "transparent",
-                  border: "none",
-                  cursor: isDone ? "pointer" : "default",
-                  padding: 0,
-                }}
-              >
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: curr
-                      ? "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))"
-                      : isDone
-                        ? "rgba(0,212,255,0.1)"
-                        : "rgba(0,212,255,0.05)",
-                    border: curr
-                      ? "none"
-                      : isDone
-                        ? "1px solid var(--neon-blue)"
-                        : "1px solid rgba(0,212,255,0.15)",
-                    boxShadow: curr ? "0 0 16px rgba(0,212,255,0.35)" : "none",
-                  }}
-                >
-                  {isDone ? (
-                    <CheckCircle size={14} style={{ color: "var(--neon-blue)" }} />
-                  ) : (
-                    <Icon size={13} style={{ color: curr ? "#fff" : "var(--text-muted)" }} />
-                  )}
-                </div>
-                <span
-                  style={{
-                    fontSize: 8,
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
-                    color: curr
-                      ? "var(--neon-pink)"
-                      : isDone
-                        ? "var(--neon-blue)"
-                        : "var(--text-muted)",
-                    opacity: !curr && !isDone ? 0.5 : 1,
-                  }}
-                >
-                  {s.label}
-                </span>
-              </button>
-              {idx < ADMIN_BOOKING_STEPS.length - 1 && (
-                <div
-                  style={{
-                    width: 28,
-                    height: 1,
-                    margin: "0 2px",
-                    marginBottom: 14,
-                    background: isDone ? "var(--neon-blue)" : "rgba(0,212,255,0.15)",
-                  }}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Step body */}
-      <div style={{ padding: "16px 0" }}>
-        <AnimatePresence mode="wait" custom={dir}>
-          <motion.div
-            key={step}
-            custom={dir}
-            variants={adminSlideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-          >
-            {stepBodies[step - 1]}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {error && (
-        <p
-          style={{
-            margin: "0 0 14px",
-            fontSize: 13,
-            color: "var(--neon-pink)",
-            background: "rgba(255,45,155,0.1)",
-            border: "1px solid rgba(255,45,155,0.3)",
-            borderRadius: 10,
-            padding: "8px 14px",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <AlertCircle size={13} /> {error}
-        </p>
-      )}
-
-      {/* Nav footer */}
-      <div style={{ display: "flex", gap: 10 }}>
-        <button
-          onClick={() => (step === 1 ? handleClose() : go(step - 1))}
-          disabled={loading}
-          style={{
-            flex: 1,
-            padding: "10px 0",
-            borderRadius: 10,
-            background: "transparent",
-            border: "1px solid rgba(0,212,255,0.2)",
-            color: "var(--text-soft)",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          {step === 1 ? "Cancel" : "← Back"}
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!canProceed || loading}
-          style={{
-            flex: 1,
-            padding: "10px 0",
-            borderRadius: 10,
-            background:
-              step === 4
-                ? "linear-gradient(135deg,var(--neon-pink),var(--neon-blue))"
-                : "linear-gradient(135deg,var(--neon-blue),var(--neon-purple))",
-            border: "none",
-            color: "#fff",
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: 1,
-            cursor: canProceed && !loading ? "pointer" : "not-allowed",
-            opacity: canProceed ? (loading ? 0.5 : 1) : 0.4,
-            boxShadow:
-              step === 4 ? "0 0 20px rgba(255,45,155,0.3)" : "0 0 20px rgba(0,212,255,0.3)",
-          }}
-        >
-          {step === 4
-            ? loading
-              ? "Creating…"
-              : "Create Booking"
-            : "Next →"}
-        </button>
-      </div>
-    </SlidePanel>
-  );
-}
-/* ───── MAIN COMPONENT ───── */
 export default function AdminBooking() {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -1325,7 +542,6 @@ export default function AdminBooking() {
   );
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showNewModal, setShowNewModal] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState>({
     open: false,
     type: null,
@@ -1337,28 +553,47 @@ export default function AdminBooking() {
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
+  // Fetch bookings directly from Laravel API
   const fetchBookings = useCallback(async () => {
     try {
       setIsLoading(true);
       const token =
         localStorage.getItem("token") || sessionStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/booking?per_page=100`, {
+
+      // Fetch directly from Laravel API
+      const res = await fetch(`${API_URL}/api/booking`, {
         headers: {
           Accept: "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        cache: "no-store",
       });
+
       const data = await res.json().catch(() => ({}));
       let list: Booking[] = [];
-      if (data) {
-        if (Array.isArray(data.data)) list = data.data;
-        else if (Array.isArray(data)) list = data;
-        else if (Array.isArray((data as any)?.data?.data))
-          list = (data as any).data.data;
+
+      // Handle various response formats
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data?.data) {
+        if (Array.isArray(data.data)) {
+          list = data.data;
+        } else if (Array.isArray(data.data.data)) {
+          list = data.data.data;
+        }
       }
+
+      // Normalize field names (full_name → audience_name for compatibility)
+      list = list.map((booking) => ({
+        ...booking,
+        audience_name: booking.full_name || booking.audience_name,
+        audience_email: booking.email || booking.audience_email,
+      }));
+
       setBookings(list);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch bookings:", err);
+      setBookings([]);
     } finally {
       setIsLoading(false);
     }
@@ -1374,6 +609,7 @@ export default function AdminBooking() {
       setCurrentYear((y) => y - 1);
     } else setCurrentMonth((m) => m - 1);
   };
+
   const nextMonth = () => {
     if (currentMonth === 11) {
       setCurrentMonth(0);
@@ -1381,14 +617,22 @@ export default function AdminBooking() {
     } else setCurrentMonth((m) => m + 1);
   };
 
+  const getDefaultMessage = (type: string, booking: Booking) => {
+    const clientName = booking.full_name || booking.audience_name || "Guest";
+    const clientEmail = booking.email || "-";
+
+    if (type === "approve") {
+      return `Hello ${clientName},\n\nWe are pleased to confirm your appointment booking.\n\nIf you have any questions, please reply to this email or contact us.\n\nThank you!`;
+    } else {
+      return `Hello ${clientName},\n\nUnfortunately, we are unable to accommodate your requested time slot.\n\nPlease reach out to us at your earliest convenience to reschedule.\n\nThank you for your understanding.`;
+    }
+  };
+
   const openActionModal = (type: string, booking: Booking) => {
     if (type === "approve") {
       const now = new Date();
-      const bdt = parseDateTime(
-        booking.scheduled_at ? booking.scheduled_at.split(" ")[0] : "",
-        booking.scheduled_at ? booking.scheduled_at.split(" ")[1] : "",
-      );
-      if (bdt < now) {
+      const bdt = booking.scheduled_at ? new Date(booking.scheduled_at) : null;
+      if (bdt && bdt < now) {
         setActionModal({
           open: true,
           type: "reject",
@@ -1400,13 +644,20 @@ export default function AdminBooking() {
         return;
       }
     }
-    setActionModal({ open: true, type, booking, notes: "", submitting: false });
+    const defaultMsg = getDefaultMessage(type, booking);
+    setActionModal({
+      open: true,
+      type,
+      booking,
+      notes: defaultMsg,
+      submitting: false,
+    });
   };
 
   const handleActionSubmit = async () => {
     const { type, booking, notes } = actionModal;
     if (!notes.trim()) {
-      alert("Please add a note.");
+      alert("Please add a note/message.");
       return;
     }
     setActionModal((p) => ({ ...p, submitting: true }));
@@ -1414,16 +665,23 @@ export default function AdminBooking() {
       const token =
         localStorage.getItem("token") || sessionStorage.getItem("token");
       const status = type === "approve" ? "confirmed" : "cancelled";
-      const res = await fetch(`${API_URL}/api/booking/${booking?.id}`, {
+
+      const res = await fetch(`${API_URL}/api/booking/${booking?.id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ status, notes }),
+        body: JSON.stringify({
+          status,
+          notes,
+          client_email: booking?.email || booking?.audience_email,
+        }),
       });
+
       if (!res.ok) throw new Error("Failed to update booking.");
+
       setActionModal({
         open: false,
         type: null,
@@ -1431,6 +689,7 @@ export default function AdminBooking() {
         notes: "",
         submitting: false,
       });
+
       fetchBookings();
     } catch (err: any) {
       alert("Error: " + (err?.message || String(err)));
@@ -1442,18 +701,16 @@ export default function AdminBooking() {
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const bookedDates = new Set(
     safeBookings.map((b) =>
-      b.scheduled_at
-        ? b.scheduled_at.split(" ")[0] || b.scheduled_at.split("T")[0]
-        : undefined,
+      b.scheduled_at ? b.scheduled_at.split("T")[0] : undefined,
     ),
   );
   const todayBookings = safeBookings.filter((b) => {
-    const d = b.scheduled_at
-      ? b.scheduled_at.split("T")[0] || b.scheduled_at.split(" ")[0]
-      : undefined;
+    const d = b.scheduled_at ? b.scheduled_at.split("T")[0] : undefined;
     return d === selectedDate;
   });
-  const pendingBookings = safeBookings.filter((b) => b.status === "pending");
+  const pendingBookings = safeBookings.filter(
+    (b) => b.status === "pending" || b.status === "new",
+  );
   const upcomingBookings = safeBookings.filter((b) => {
     if (b.status !== "confirmed" && b.status !== "approved") return false;
     const d = b.scheduled_at ? new Date(b.scheduled_at) : null;
@@ -1493,27 +750,6 @@ export default function AdminBooking() {
             {safeBookings.length} total appointments
           </p>
         </div>
-        <button
-          onClick={() => setShowNewModal(true)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "9px 20px",
-            background:
-              "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-            border: "none",
-            borderRadius: 50,
-            color: "#fff",
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: 1,
-            cursor: "pointer",
-            boxShadow: "0 0 20px rgba(0,212,255,0.35)",
-          }}
-        >
-          <Plus size={14} /> New Booking
-        </button>
       </div>
 
       {/* Clinic Banner */}
@@ -1552,7 +788,7 @@ export default function AdminBooking() {
               color: "var(--text-bright)",
             }}
           >
-            Rapture Commedy Bar & Cafe
+            Rapture Comedy Bar & Cafe
           </p>
           <p
             style={{
@@ -1561,7 +797,7 @@ export default function AdminBooking() {
               color: "var(--text-muted)",
             }}
           >
-            Admin Dashboard · Manage patient appointments
+            Admin Dashboard · Manage appointments
           </p>
         </div>
         {/* Stats */}
@@ -1587,7 +823,11 @@ export default function AdminBooking() {
             <div
               key={s.label}
               className="stat-card"
-              style={{ padding: "13px 44px", textAlign: "center", minWidth: 64 }}
+              style={{
+                padding: "13px 44px",
+                textAlign: "center",
+                minWidth: 64,
+              }}
             >
               <div
                 style={{
@@ -1607,8 +847,6 @@ export default function AdminBooking() {
                   textTransform: "uppercase",
                   color: "var(--text-muted)",
                   marginTop: 3,
-                  marginLeft: 3,
-                  marginRight: 3,
                 }}
               >
                 {s.label}
@@ -2092,6 +1330,19 @@ export default function AdminBooking() {
                             alignItems: "center",
                             justifyContent: "center",
                             color: "var(--neon-blue)",
+                            transition: "all 0.2s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background =
+                              "rgba(0,212,255,0.25)";
+                            e.currentTarget.style.borderColor =
+                              "rgba(0,212,255,0.5)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background =
+                              "rgba(0,212,255,0.15)";
+                            e.currentTarget.style.borderColor =
+                              "rgba(0,212,255,0.35)";
                           }}
                         >
                           <CheckCircle size={13} />
@@ -2109,6 +1360,19 @@ export default function AdminBooking() {
                             alignItems: "center",
                             justifyContent: "center",
                             color: "var(--neon-pink)",
+                            transition: "all 0.2s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background =
+                              "rgba(255,45,155,0.2)";
+                            e.currentTarget.style.borderColor =
+                              "rgba(255,45,155,0.4)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background =
+                              "rgba(255,45,155,0.12)";
+                            e.currentTarget.style.borderColor =
+                              "rgba(255,45,155,0.3)";
                           }}
                         >
                           <XCircle size={13} />
@@ -2123,11 +1387,6 @@ export default function AdminBooking() {
         </div>
       </div>
 
-      <NewBookingModal
-        open={showNewModal}
-        onClose={() => setShowNewModal(false)}
-        onSuccess={fetchBookings}
-      />
       <ActionModal
         modal={actionModal}
         onClose={() =>
