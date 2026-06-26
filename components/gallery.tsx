@@ -652,6 +652,8 @@ export function Gallery() {
           </svg>
         </a>
       </div>
+
+      
     </section>
   );
 }

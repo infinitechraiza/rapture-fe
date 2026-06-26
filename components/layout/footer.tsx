@@ -2,11 +2,18 @@
 
 export function Footer() {
   return (
-    <footer>
+    <footer className="site-footer">
+      <div className="footer-glow footer-glow-1" />
+      <div className="footer-glow footer-glow-2" />
+      <div className="footer-glow footer-glow-3" />
+
       <div className="footer-inner px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <div className="footer-grid grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           <div className="footer-brand sm:col-span-2 lg:col-span-1">
-            <a href="#home" className="footer-logo-wrap flex items-center gap-2">
+            <a
+              href="#home"
+              className="footer-logo-wrap flex items-center gap-2"
+            >
               <div className="logo-icon">🌈</div>
               <div>
                 <div className="logo-text">PRISMA</div>

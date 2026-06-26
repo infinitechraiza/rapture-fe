@@ -1,5 +1,4 @@
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+
 import { HeroSection } from "@/components/hero/home-hero-section";
 import { MarqueeWrap } from "@/components/marquee-wrap";
 import { NeonDivider } from "@/components/neon-divider";
@@ -11,7 +10,6 @@ import { Gallery } from "@/components/gallery";
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      <Header />
       <main>
         <HeroSection />
         <NeonDivider />
@@ -28,7 +26,6 @@ export default function HomePage() {
         <NeonDivider />
       </main>
 
-      <Footer />
     </div>
   );
 }

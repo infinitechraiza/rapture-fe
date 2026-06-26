@@ -1117,7 +1117,8 @@ export default function CalendarPage() {
   const eventsByDay: Record<number, CalendarEvent[]> = {};
   for (const ev of events) {
     if (!ev.event_date) continue;
-    const parts = ev.event_date.split("T")[0].split("-").map(Number); // handles "2026-06-22" and "2026-06-22T00:00:00"
+    const parts = ev.event_date?.split("T")?.map((s) => s.split("-").map(Number)); // handles "2026-06-22" and "2026-06-22T00:00:00"
+    if(!parts || parts.length < 3) continue;
     const [evYear, evMonth, evDay] = parts;
     if (evYear === year && evMonth === month + 1) {
       (eventsByDay[evDay] ||= []).push(ev);
