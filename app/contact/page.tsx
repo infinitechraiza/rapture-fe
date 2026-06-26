@@ -115,7 +115,7 @@ export default function ContactPage() {
       id="contact"
       style={{
         minHeight: "100vh",
-        background: "#070b14",
+        background: "linear-gradient(135deg, #0a1a4e, #4e0a2d)",
         padding: "clamp(2rem, 8vw, 5rem) clamp(1rem, 4vw, 1.5rem)",
         fontFamily: "'Space Grotesk', sans-serif",
         color: "#fff",
