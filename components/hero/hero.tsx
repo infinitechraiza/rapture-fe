@@ -168,7 +168,7 @@ export function HeroSection() {
                   filter: "drop-shadow(0 0 30px rgba(255,45,155,0.6))",
                 }}
               >
-                🌈
+                
               </div>
               <div
                 style={{
@@ -198,7 +198,7 @@ export function HeroSection() {
                   marginLeft: 15,
                 }}
               >
-                Gay Bar &amp; Café
+                Rapture Cafe Bar
               </div>
             </div>
 
@@ -209,7 +209,7 @@ export function HeroSection() {
                 <div className="now-live-dot" aria-hidden="true" />
                 Live Tonight
               </div>
-              <div className="hero-card-title">Drag Extravaganza Night</div>
+              <div className="hero-card-title">Party Night</div>
               <div className="hero-card-sub">Doors open 8PM · 18+ Only · Limited seats</div>
             </div>
           </div>

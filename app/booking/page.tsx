@@ -832,7 +832,7 @@ const ConfirmationScreen = ({
     className="flex items-center justify-center px-6 py-20 min-h-screen"
     style={{
       background:
-        "linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(30,41,59,0.2) 50%, rgba(15,23,42,0.4) 100%)",
+        "linear-gradient(180deg, transparent 2%, var(--purple-glow) 40%, transparent 100%)",
       backdropFilter: "blur(10px)",
     }}
   >
@@ -1247,7 +1247,7 @@ const ConfirmationScreen = ({
           gap: 6,
         }}
       >
-        <MapPin size={10} /> Rapture Comedy Bar & Cafe · Mon–Sat 9AM–7PM
+        <MapPin size={10} /> Rapture Cafe Bar · Mon–Sat 9AM–7PM
       </p>
     </motion.div>
   </div>
@@ -1949,7 +1949,7 @@ export default function Book() {
       className="w-full"
       style={{
         background:
-          "linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(30,41,59,0.2) 50%, rgba(15,23,42,0.4) 100%)",
+          "linear-gradient(180deg, transparent 2%, var(--purple-glow) 40%, transparent 100%)",
         backdropFilter: "blur(10px)",
         paddingTop: "2rem",
         paddingBottom: "2rem",
@@ -1989,7 +1989,7 @@ export default function Book() {
             className="flex items-center justify-center gap-1.5"
             style={{ color: "var(--text-muted)", fontSize: 13 }}
           >
-            <MapPin size={12} /> Rapture Comedy Bar & Cafe &nbsp;·&nbsp; Mon–Sat
+            <MapPin size={12} /> Rapture Cafe Bar &nbsp;·&nbsp; Mon–Sat
             9AM–7PM
           </p>
         </motion.div>

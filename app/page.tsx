@@ -1,11 +1,13 @@
 
-import { HeroSection } from "@/components/hero/home-hero-section";
+import { HeroSection } from "@/components/hero/HeroSection";
 import { MarqueeWrap } from "@/components/marquee-wrap";
 import { NeonDivider } from "@/components/neon-divider";
 
-import { About } from "@/components/about";
-import { Show } from "@/components/show";
-import { Gallery } from "@/components/gallery";
+import { AboutPage } from "@/components/AboutSection";
+import { Show } from "@/components/ShowSection";
+import { Gallery } from "@/components/GallerySection";
+import { ComedianSection } from "@/components/ComedianSection";
+import { CTASection } from "@/components/CTASection";
 
 export default function HomePage() {
   return (
@@ -16,7 +18,10 @@ export default function HomePage() {
 
         <MarqueeWrap />
 
-        <About />
+        <AboutPage />
+        <NeonDivider />
+
+        <ComedianSection />
         <NeonDivider />
 
         <Show />
@@ -24,6 +29,8 @@ export default function HomePage() {
 
         <Gallery />
         <NeonDivider />
+
+        <CTASection />
       </main>
 
     </div>

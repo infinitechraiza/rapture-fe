@@ -201,7 +201,7 @@ function ResetPasswordForm() {
                   width={1000}
                   height={250}
                   src="/vencios.jpg"
-                  alt="Rapture Comedy Bar & Cafe Logo"
+                  alt="Rapture Cafe Bar Logo"
                   className="w-full h-full rounded-full object-cover"
                 />
               </div>

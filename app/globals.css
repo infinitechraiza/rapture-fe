@@ -4,6 +4,9 @@
    ================================================================ */
 
 /* ─── Imports ───────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -565,6 +568,8 @@ nav {
     var(--neon-purple),
     var(--neon-pink)
   );
+  background-image: url("../app/rapture_logo.png");
+  background-size: cover;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -575,6 +580,7 @@ nav {
     0 0 35px rgba(185, 79, 255, 0.25),
     0 0 40px rgba(255, 45, 155, 0.2);
   flex-shrink: 0;
+  padding: 12px;
 }
 
 .logo-text {
@@ -1094,6 +1100,7 @@ nav {
     width: 36px;
     height: 36px;
     font-size: 17px;
+    padding: 12px;
   }
 }
 
@@ -1121,7 +1128,7 @@ nav {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: 100px 48px 80px;
+  padding: 70px 48px 50px;
   position: relative;
   overflow: hidden;
 }
@@ -1733,7 +1740,7 @@ nav {
 }
 
 /* ================================================================
-   EVENTS SECTION
+   Events Internal Page SECTION
    ================================================================ */
 
 #events {
@@ -1881,6 +1888,71 @@ nav {
   font-size: 12px;
   color: var(--text-muted);
   font-weight: 400;
+}
+
+/* ================================================================
+   Events External Page SECTION
+   ================================================================ */
+.event-card {
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  height: 320px;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
+}
+
+.event-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.event-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s;
+}
+
+.event-card:hover .event-card-img {
+  transform: scale(1.05);
+}
+
+.event-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(6, 6, 20, 0.95) 0%,
+    rgba(6, 6, 20, 0.5) 50%,
+    rgba(6, 6, 20, 0.1) 100%
+  );
+}
+
+.event-card-content {
+  position: absolute;
+  inset: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.event-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 50px;
+  color: #fff;
 }
 
 /* ================================================================
@@ -2098,7 +2170,7 @@ nav {
    GALLERY SECTION
    ================================================================ */
 #gallery {
-  padding: 120px 0 120px 48px;
+  padding: 120px 48px 120px 48px;
 
   background: linear-gradient(
     180deg,
@@ -2715,6 +2787,18 @@ footer {
   box-shadow: 0 0 15px rgba(255, 45, 155, 0.3);
 }
 
+/* ─── Section glow bg ───────────────────────────────────────────── */
+.section-glow-bg {
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--purple-glow) 50%,
+      transparent 100%
+    ),
+    var(--dark-navy);
+}
+
 /* ─── Neon Divider ───────────────────────────────────────────── */
 .neon-divider {
   height: 1px;
@@ -2728,6 +2812,845 @@ footer {
   );
   margin: 0;
   box-shadow: 0 0 20px rgba(185, 79, 255, 0.3);
+  /* 
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--neon-purple),
+    var(--neon-pink),
+    var(--neon-blue),
+    transparent
+  );
+  opacity: 0.5; */
+}
+
+/* ─── Comedian Cards ───────────────────────────────────────────── */
+.comedian-card {
+  background: rgba(13, 13, 43, 0.8);
+  border: 1px solid rgba(185, 79, 255, 0.2);
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.comedian-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(185, 79, 255, 0.08) 0%,
+    rgba(0, 212, 255, 0.06) 100%
+  );
+  pointer-events: none;
+}
+
+.comedian-card:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 20px 50px rgba(185, 79, 255, 0.25),
+    0 0 30px rgba(255, 45, 155, 0.15);
+  border-color: rgba(185, 79, 255, 0.5);
+}
+
+.comedian-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(185, 79, 255, 0.4);
+  box-shadow: 0 0 24px rgba(185, 79, 255, 0.25);
+  margin: 0 auto 16px;
+  display: block;
+  transition:
+    box-shadow 0.3s,
+    transform 0.3s;
+}
+
+.comedian-card:hover .comedian-avatar {
+  box-shadow:
+    0 0 0 4px rgba(185, 79, 255, 0.5),
+    0 0 30px rgba(255, 45, 155, 0.3);
+  transform: scale(1.06);
+}
+
+.comedian-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+}
+
+/* ─── Modal───────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(6, 6, 20, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-card {
+  background: linear-gradient(135deg, #0d0d2b, #1a0830);
+  border: 1px solid rgba(185, 79, 255, 0.35);
+  border-radius: 24px;
+  max-width: 480px;
+  width: 100%;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+  box-shadow: 0 0 80px rgba(185, 79, 255, 0.2);
+}
+
+/* ─── KEYFRAME ANIMATIONS ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================================================================
+   RESPONSIVE COMEDIAN SECTION
+   ================================================================ */
+
+/* Mobile First - Base (0px to 640px) */
+@media (max-width: 640px) {
+  .section-glow-bg {
+    padding: 60px 20px !important;
+  }
+
+  .comedian-grid {
+    display: grid;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .comedian-card {
+    padding: 20px 16px 16px !important;
+  }
+
+  .comedian-avatar {
+    width: 80px !important;
+    height: 80px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .comedian-section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 20px !important;
+    margin-bottom: 40px !important;
+  }
+
+  .comedian-section-title {
+    font-size: 28px !important;
+  }
+
+  .comedian-section-link {
+    width: 100% !important;
+    text-align: center !important;
+  }
+}
+
+/* Tablet (641px to 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .section-glow-bg {
+    padding: 80px 32px !important;
+  }
+
+  .comedian-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  .comedian-card {
+    padding: 24px 20px 20px !important;
+  }
+
+  .comedian-avatar {
+    width: 88px !important;
+    height: 88px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .comedian-section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    margin-bottom: 48px !important;
+  }
+
+  .comedian-section-title {
+    font-size: 40px !important;
+  }
+}
+
+/* Desktop (1025px and above) */
+@media (min-width: 1025px) {
+  .section-glow-bg {
+    padding: 100px 48px !important;
+  }
+
+  .comedian-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  .comedian-card {
+    padding: 28px 24px 24px !important;
+  }
+
+  .comedian-avatar {
+    width: 96px !important;
+    height: 96px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .comedian-section-header {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    margin-bottom: 56px !important;
+  }
+
+  .comedian-section-title {
+    font-size: 52px !important;
+  }
+}
+
+/* Modal Responsive */
+@media (max-width: 640px) {
+  .modal-card {
+    max-width: 90vw !important;
+    border-radius: 20px !important;
+  }
+
+  .modal-card-content {
+    padding: 12px 20px 20px !important;
+  }
+
+  .modal-avatar {
+    width: 100px !important;
+    height: 100px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .modal-title {
+    font-size: 20px !important;
+  }
+
+  .modal-tagline {
+    font-size: 14px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .modal-description {
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .comedian-section-header {
+    margin-bottom: 30px !important;
+  }
+
+  .comedian-card h3 {
+    font-size: 15px !important;
+  }
+
+  .comedian-category {
+    font-size: 9px !important;
+  }
+
+  .section-glow-bg {
+    padding: 50px 16px !important;
+  }
+}
+
+/* ================================================================
+   RESPONSIVE CTA SECTION
+   ================================================================ */
+
+/* Mobile First - Base (0px to 640px) */
+@media (max-width: 640px) {
+  .cta-section {
+    padding: 50px 20px !important;
+  }
+
+  .cta-container {
+    padding: 40px 20px !important;
+  }
+
+  .cta-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  .cta-content {
+    order: 1;
+  }
+
+  .cta-card {
+    order: 2;
+    min-width: unset !important;
+    width: 100%;
+  }
+
+  .cta-heading {
+    font-size: 28px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .cta-label {
+    font-size: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .cta-info-list {
+    gap: 12px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .cta-info-item {
+    font-size: 13px !important;
+    gap: 10px !important;
+  }
+
+  .cta-button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 24px !important;
+    font-size: 14px !important;
+  }
+
+  .cta-location-title {
+    font-size: 14px !important;
+  }
+
+  .cta-location-subtitle {
+    font-size: 11px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .cta-location-button {
+    font-size: 11px !important;
+    padding: "8px 16px" !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .cta-icon-box {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .cta-icon-box svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .cta-heading br {
+    display: none;
+  }
+}
+
+/* Tablet (641px to 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .cta-section {
+    padding: 70px 32px !important;
+  }
+
+  .cta-container {
+    padding: 48px 40px !important;
+  }
+
+  .cta-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 48px !important;
+    align-items: center !important;
+  }
+
+  .cta-card {
+    min-width: 220px !important;
+  }
+
+  .cta-heading {
+    font-size: 36px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .cta-label {
+    font-size: 10px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .cta-info-list {
+    gap: 13px !important;
+    margin-bottom: 28px !important;
+  }
+
+  .cta-info-item {
+    font-size: 13px !important;
+    gap: 11px !important;
+  }
+
+  .cta-button {
+    padding: "12px 28px" !important;
+    font-size: 14px !important;
+  }
+
+  .cta-location-title {
+    font-size: 14px !important;
+  }
+
+  .cta-location-subtitle {
+    font-size: 12px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .cta-location-button {
+    font-size: 12px !important;
+    padding: "9px 18px" !important;
+  }
+}
+
+/* Desktop (1025px and above) */
+@media (min-width: 1025px) {
+  .cta-section {
+    padding: 80px 48px !important;
+  }
+
+  .cta-container {
+    padding: 56px 60px !important;
+  }
+
+  .cta-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 64px !important;
+    align-items: center !important;
+  }
+
+  .cta-card {
+    min-width: 240px !important;
+  }
+
+  .cta-heading {
+    font-size: 46px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .cta-label {
+    font-size: 11px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .cta-info-list {
+    gap: 14px !important;
+    margin-bottom: 32px !important;
+  }
+
+  .cta-info-item {
+    font-size: 14px !important;
+    gap: 12px !important;
+  }
+
+  .cta-button {
+    padding: "13px 32px" !important;
+    font-size: 15px !important;
+  }
+
+  .cta-location-title {
+    font-size: 15px !important;
+  }
+
+  .cta-location-subtitle {
+    font-size: 12px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .cta-location-button {
+    font-size: 12px !important;
+    padding: "9px 20px" !important;
+  }
+}
+
+/* Extra Small Mobile (0px to 480px) */
+@media (max-width: 480px) {
+  .cta-section {
+    padding: 40px 16px !important;
+  }
+
+  .cta-container {
+    padding: 32px 16px !important;
+    border-radius: 20px !important;
+  }
+
+  .cta-heading {
+    font-size: 24px !important;
+  }
+
+  .cta-grid {
+    gap: 24px !important;
+  }
+
+  .cta-info-item {
+    font-size: 12px !important;
+  }
+
+  .cta-button {
+    font-size: 13px !important;
+  }
+}
+
+/* Large Desktop (1400px and above) */
+@media (min-width: 1400px) {
+  .cta-heading {
+    font-size: 52px !important;
+  }
+
+  .cta-container {
+    padding: 64px 80px !important;
+  }
+
+  .cta-grid {
+    gap: 80px !important;
+  }
+}
+
+/* ================================================================
+   RESPONSIVE SHOW/EVENTS SECTION
+   ================================================================ */
+
+/* Mobile First - Base (0px to 640px) */
+@media (max-width: 640px) {
+  .show-section {
+    padding: 50px 20px !important;
+  }
+
+  .show-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    margin-bottom: 32px !important;
+  }
+
+  .show-heading {
+    font-size: 28px !important;
+  }
+
+  .show-header-label {
+    font-size: 10px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .show-header-link {
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    padding: "8px 16px" !important;
+  }
+
+  .show-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .event-card {
+    height: 280px !important;
+  }
+
+  .event-card h3 {
+    font-size: 15px !important;
+  }
+
+  .event-card p {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+
+  .event-card-info {
+    font-size: 10px !important;
+    gap: 10px !important;
+  }
+
+  .show-controls {
+    gap: 8px !important;
+  }
+
+  .show-prev-btn,
+  .show-next-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .show-prev-btn svg,
+  .show-next-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .show-dot {
+    width: 6px !important;
+    height: 6px !important;
+  }
+
+  .show-dot.active {
+    width: 20px !important;
+  }
+}
+
+/* Tablet (641px to 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .show-section {
+    padding: 70px 32px !important;
+  }
+
+  .show-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+    margin-bottom: 40px !important;
+  }
+
+  .show-heading {
+    font-size: 36px !important;
+  }
+
+  .show-header-label {
+    font-size: 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .show-header-link {
+    font-size: 12px !important;
+    padding: "9px 20px" !important;
+  }
+
+  .show-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 18px !important;
+    margin-bottom: 28px !important;
+  }
+
+  .event-card {
+    height: 300px !important;
+  }
+
+  .event-card h3 {
+    font-size: 16px !important;
+  }
+
+  .event-card p {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+  }
+
+  .event-card-info {
+    font-size: 11px !important;
+    gap: 12px !important;
+  }
+
+  .show-controls {
+    gap: 10px !important;
+  }
+
+  .show-prev-btn,
+  .show-next-btn {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .show-dot {
+    width: 7px !important;
+    height: 7px !important;
+  }
+
+  .show-dot.active {
+    width: 22px !important;
+  }
+}
+
+/* Desktop (1025px and above) */
+@media (min-width: 1025px) {
+  .show-section {
+    padding: 100px 48px !important;
+  }
+
+  .show-header {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    margin-bottom: 48px !important;
+  }
+
+  .show-heading {
+    font-size: 52px !important;
+  }
+
+  .show-header-label {
+    font-size: 11px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .show-header-link {
+    font-size: 13px !important;
+    padding: "10px 22px" !important;
+    white-space: nowrap;
+  }
+
+  .show-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 20px !important;
+    margin-bottom: 32px !important;
+  }
+
+  .event-card {
+    height: 320px !important;
+  }
+
+  .event-card h3 {
+    font-size: 17px !important;
+  }
+
+  .event-card p {
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+  }
+
+  .event-card-info {
+    font-size: 11px !important;
+    gap: 14px !important;
+  }
+
+  .show-controls {
+    gap: 12px !important;
+  }
+
+  .show-prev-btn,
+  .show-next-btn {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .show-dot {
+    width: 7px !important;
+    height: 7px !important;
+  }
+
+  .show-dot.active {
+    width: 24px !important;
+  }
+}
+
+/* Extra Small Mobile (0px to 480px) */
+@media (max-width: 480px) {
+  .show-section {
+    padding: 40px 16px !important;
+  }
+
+  .show-header {
+    margin-bottom: 24px !important;
+  }
+
+  .show-heading {
+    font-size: 24px !important;
+  }
+
+  .show-grid {
+    margin-bottom: 20px !important;
+  }
+
+  .event-card {
+    height: 260px !important;
+  }
+
+  .show-controls {
+    gap: 6px !important;
+  }
+
+  .show-prev-btn,
+  .show-next-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+/* Large Desktop (1400px and above) */
+@media (min-width: 1400px) {
+  .show-section {
+    padding: 120px 60px !important;
+  }
+
+  .show-heading {
+    font-size: 56px !important;
+  }
+
+  .show-grid {
+    gap: 24px !important;
+  }
+
+  .event-card {
+    height: 340px !important;
+  }
+}
+
+/* Landscape Mobile */
+@media (max-height: 700px) and (orientation: landscape) {
+  .event-card {
+    height: 220px !important;
+  }
+
+  .show-section {
+    padding: 40px 24px !important;
+  }
 }
 
 /* ================================================================

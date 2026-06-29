@@ -24,7 +24,7 @@ interface BeforeInstallPromptEvent extends Event {
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "shows", label: "Shows" },
-  { href: "commedians", label: "Commedians" },
+  { href: "comedians", label: "Comedians" },
   { href: "gallery", label: "Gallery" },
   { href: "contact", label: "Find Us" },
   { href: "myreservations", label: "My reservations" },
@@ -190,7 +190,7 @@ export function Header() {
           <div>
             <div className="logo-text">RAPTURE</div>
             <div className="logo-sub text-xs sm:text-sm">
-              Comedy Bar &amp; Café
+              Comedy Cafe &amp; Bar
             </div>
           </div>
         </Link>

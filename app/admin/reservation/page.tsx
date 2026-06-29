@@ -788,7 +788,7 @@ export default function AdminBooking() {
               color: "var(--text-bright)",
             }}
           >
-            Rapture Comedy Bar & Cafe
+            Rapture Cafe Bar
           </p>
           <p
             style={{

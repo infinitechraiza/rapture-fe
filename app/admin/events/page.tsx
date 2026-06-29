@@ -554,7 +554,7 @@ function NewEventModal({
     if (!form.event_date) e.event_date = "Event date is required.";
     if (!form.start_time) e.start_time = "Start time is required.";
     if (!form.end_time) e.end_time = "End time is required.";
- 
+
     if (form.comedian_ids.length === 0)
       e.comedian_ids = "Select at least one comedian.";
     setErrors(e);
@@ -1117,9 +1117,8 @@ export default function CalendarPage() {
   const eventsByDay: Record<number, CalendarEvent[]> = {};
   for (const ev of events) {
     if (!ev.event_date) continue;
-    const parts = ev.event_date?.split("T")?.map((s) => s.split("-").map(Number)); // handles "2026-06-22" and "2026-06-22T00:00:00"
-    if(!parts || parts.length < 3) continue;
-    const [evYear, evMonth, evDay] = parts;
+    const dateParts = ev.event_date.split("T")[0]; // handles "2026-06-22" and "2026-06-22T00:00:00"
+    const [evYear, evMonth, evDay] = dateParts.split("-").map(Number);
     if (evYear === year && evMonth === month + 1) {
       (eventsByDay[evDay] ||= []).push(ev);
     }
@@ -1143,6 +1142,7 @@ export default function CalendarPage() {
     day === today.getDate() &&
     month === today.getMonth() &&
     year === today.getFullYear();
+
   const isoDate = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 

@@ -71,7 +71,9 @@ export function Gallery() {
       wrapScroll();
     };
 
-    const onTouchEnd = () => { isDown = false; };
+    const onTouchEnd = () => {
+      isDown = false;
+    };
 
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX) || Math.abs(e.deltaX) > 0) {
@@ -107,29 +109,50 @@ export function Gallery() {
 
   return (
     <section id="gallery">
-      <div className="gallery-header">
-        <div className="section-eyebrow">Memories</div>
-        <h2 className="section-title">
-          The{" "}   Vibe at {" "}
+      {/* Header */}
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "0 24px",
+          textAlign: "center",
+          marginBottom: 48,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 4,
+            textTransform: "uppercase",
+            color: "var(--neon-blue)",
+            marginBottom: 12,
+          }}
+        >
+          Memories
+        </div>
+        <h2
+          style={{
+            fontSize: "clamp(32px,4vw,52px)",
+            fontWeight: 900,
+            color: "#fff",
+            marginBottom: 12,
+          }}
+        >
+          The Vibe at{" "}
           <span
             style={{
               background:
-                "linear-gradient(90deg, var(--neon-blue), var(--neon-pink))",
+                "linear-gradient(90deg,var(--neon-blue),var(--neon-pink))",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
             }}
           >
-          RAPTURE
-          </span>{" "}
-        
+            RAPTURE
+          </span>
         </h2>
-        <p
-          style={{
-            color: "var(--text-muted)",
-            fontSize: "15px",
-            marginTop: "12px",
-          }}
-        >
+        <p style={{ color: "var(--text-muted)", fontSize: 15 }}>
           Every night a different story. Every guest a different light. Drag to
           explore.
         </p>
@@ -140,16 +163,11 @@ export function Gallery() {
           <div className="gallery-set">
             <div className="gallery-column">
               <div className="gallery-item" style={{ height: "280px" }}>
-                <img
-                  className="gallery-img"
-                  src="https://images.unsplash.com/photo-1571266028243-d220c9c3b31e?w=600&q=80"
-                  alt="Drag performance"
-                />
                 <div className="gallery-overlay">
                   <div className="gallery-tag">Live Show</div>
-                  <div className="gallery-title">Drag Extravaganza</div>
+                  <div className="gallery-title">Party tonight</div>
                   <div className="gallery-desc">
-                    Glam, shade & laughter every Monday night.
+                    Glam, shade & party every Monday night.
                   </div>
                 </div>
               </div>
@@ -636,24 +654,43 @@ export function Gallery() {
         </div>
       </div>
 
-      <div className="gallery-footer">
-        <a href="#gallery" className="btn-full-gallery">
+      {/* Footer: Full Gallery button */}
+      <div style={{ textAlign: "center", marginTop: 48, padding: "0 24px" }}>
+        <a
+          href="/gallery"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "16px 40px",
+            borderRadius: 50,
+            fontWeight: 700,
+            fontSize: 15,
+            background:
+              "linear-gradient(135deg,var(--neon-blue),var(--neon-purple),var(--neon-pink))",
+            color: "#fff",
+            textDecoration: "none",
+            boxShadow:
+              "0 0 40px rgba(185,79,255,0.35), 0 0 60px rgba(0,212,255,0.2)",
+            letterSpacing: 0.5,
+          }}
+        >
           Full Gallery
           <svg
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
           </svg>
         </a>
       </div>
-
-      
     </section>
   );
 }

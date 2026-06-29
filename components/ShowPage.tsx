@@ -1,320 +1,272 @@
-"use client";
-
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
+import { motion } from "framer-motion";
+import { ChevronDown, ArrowRight, ArrowLeft } from "lucide-react";
+interface Show {
+  title: string;
+  description: string;
+  image: string;
+}
 
-const events = [
-  {
-    id: 1,
-    badge: "badge-tonight",
-    badgeText: "Tonight",
-    date: "Mon, June 15 · 9PM",
-    title: "Drag Extravaganza Night",
-    desc: "The Philippines' most fabulous drag queens take the stage for a night of glam, shade, and laughter.",
-    img: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&q=80",
-  },
-  {
-    id: 2,
-    badge: "badge-weekly",
-    badgeText: "Weekly",
-    date: "Tue–Sat · 10PM–4AM",
-    title: "DJ Night: Neon Dreams",
-    desc: "House, dance pop, and BPM bangers curated by QC's top LGBTQ+ DJs. Dance floor opens at 10.",
-    img: "https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?w=800&q=80",
-  },
-  {
-    id: 3,
-    badge: "badge-weekly",
-    badgeText: "Weekends",
-    date: "Sat & Sun · 11AM–3PM",
-    title: "Rainbow Brunch",
-    desc: "Free-flowing mimosas, bottomless pancakes, and live acoustic sets every Saturday and Sunday morning.",
-    img: "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=800&q=80",
-  },
-  {
-    id: 4,
-    badge: "badge-special",
-    badgeText: "Special",
-    date: "Sat, June 28 · All Day",
-    title: "Pride Month Closing Party",
-    desc: "A massive all-day celebration with local artists, pride parade viewing, and an electrifying night concert.",
-    img: "https://images.unsplash.com/photo-1561489413-985b06da5bee?w=800&q=80",
-  },
-  {
-    id: 5,
-    badge: "badge-weekly",
-    badgeText: "Weekly",
-    date: "Every Wednesday · 8PM",
-    title: "Karaoke Chaos Night",
-    desc: "Sing your heart out — or watch others do it. Prizes for best performance and most dramatic exit.",
-    img: "https://images.unsplash.com/photo-1516450137517-162bfbeb8dba?w=800&q=80",
-  },
-  {
-    id: 6,
-    badge: "badge-special",
-    badgeText: "Monthly",
-    date: "Last Friday · 9:30PM",
-    title: "Queer Comedy Night",
-    desc: "Stand-up comedy by and for the community. Expect sharp wit, personal stories, and ugly crying (from laughter).",
-    img: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=800&q=80",
-  },
-  {
-    id: 7,
-    badge: "badge-soon",
-    badgeText: "Coming Soon",
-    date: "Fri, July 5 · 8PM",
-    title: "Live Band Extravaganza",
-    desc: "Local indie and pop bands perform live in an intimate setting. Perfect for discovering new artists.",
-    img: "https://images.unsplash.com/photo-1501612780327-45045538702b?w=800&q=80",
-  },
-  {
-    id: 8,
-    badge: "badge-weekly",
-    badgeText: "Weekly",
-    date: "Mon & Thu · 7PM",
-    title: "Makeup Artist Meet & Greet",
-    desc: "Connect with professional makeup artists, get tips and tricks, and enjoy special discounts on beauty products.",
-    img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800&q=80",
-  },
-  {
-    id: 9,
-    badge: "badge-weekly",
-    badgeText: "Weekends",
-    date: "Fri, Sat & Sun · 5PM–8PM",
-    title: "Happy Hour Fiesta",
-    desc: "50% off cocktails and appetizers during our golden hour. Perfect for after-work hangouts and celebrations.",
-    img: "https://images.unsplash.com/photo-1575037614876-c38a4d44f5b8?w=800&q=80",
-  },
-  {
-    id: 10,
-    badge: "badge-special",
-    badgeText: "Special",
-    date: "Sun, July 12 · 6PM",
-    title: "Theater Workshop & Showcase",
-    desc: "Learn from local theater actors and performers, then watch showcase performances. Open to all levels.",
-    img: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&q=80",
-  },
-  {
-    id: 11,
-    badge: "badge-weekly",
-    badgeText: "Weekly",
-    date: "Tue & Fri · 9PM",
-    title: "Battle of the Bands",
-    desc: "Local bands compete on stage for prizes and bragging rights. Vote for your favorite performers.",
-    img: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80",
-  },
-  {
-    id: 12,
-    badge: "badge-special",
-    badgeText: "Special",
-    date: "Sat, July 19 · 10PM",
-    title: "Celebrity Guest Night",
-    desc: "Special performances by international LGBTQ+ artists and influencers. Limited tickets available.",
-    img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80",
-  },
+export const SHOWS = [
+  { id: 1, badge: "Tonight", badgeColor: "linear-gradient(135deg,#ff2d9b,#b94fff)", title: "Drag Extravaganza Night", desc: "The Philippines' most fabulous drag queens — one stage, one unforgettable night.", date: "Mon, June 15", time: "9:00 PM", img: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=900&q=80" },
+  { id: 2, badge: "This Saturday", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Pride Month Closing Party", desc: "An all-day celebration — live acts, parade viewing & electrifying concert.", date: "Sat, June 28", time: "All Day", img: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=900&q=80" },
+  { id: 3, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#b94fff)", title: "DJ Night: Neon Dreams", desc: "House, dance pop & BPM bangers from QC's top LGBTQ+ DJs.", date: "Tue–Sat", time: "10:00 PM – 4:00 AM", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&q=80" },
+  { id: 4, badge: "Weekends", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Rainbow Brunch", desc: "Free-flowing mimosas, bottomless pancakes, and live acoustic sets.", date: "Sat & Sun", time: "11:00 AM – 3:00 PM", img: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=700&q=80" },
+  { id: 5, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Karaoke Chaos Night", desc: "Sing your heart out — prizes for best performance and most dramatic exit.", date: "Every Wednesday", time: "8:00 PM", img: "https://images.unsplash.com/photo-1485872299829-c673f5194813?w=700&q=80" },
+  { id: 6, badge: "Monthly", badgeColor: "linear-gradient(135deg,#ff9d00,#ff2d9b)", title: "Queer Comedy Night", desc: "Stand-up comedy by and for the community. Expect sharp wit and ugly crying.", date: "Last Friday", time: "9:30 PM", img: "https://images.unsplash.com/photo-1496843916299-590492c751f4?w=700&q=80" },
+  { id: 7, badge: "Coming Soon", badgeColor: "rgba(255,200,0,0.9)", title: "Live Band Extravaganza", desc: "Local indie and pop bands perform live in an intimate setting.", date: "Fri, July 5", time: "8:00 PM", img: "https://images.unsplash.com/photo-1501612780327-45045538702b?w=700&q=80" },
+  { id: 8, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Makeup Artist Meet & Greet", desc: "Connect with professional makeup artists, get tips, enjoy special discounts.", date: "Mon & Thu", time: "7:00 PM", img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=700&q=80" },
+  { id: 9, badge: "Weekends", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Happy Hour Fiesta", desc: "50% off cocktails and appetizers. Perfect for after-work hangouts.", date: "Fri, Sat & Sun", time: "5:00 PM – 8:00 PM", img: "https://images.unsplash.com/photo-1575037614876-c38a4d44f5b8?w=700&q=80" },
+  { id: 10, badge: "Special", badgeColor: "linear-gradient(135deg,#ff9d00,#ff2d9b)", title: "Theater Workshop & Showcase", desc: "Learn from local theater actors and performers, then watch showcases.", date: "Sun, July 12", time: "6:00 PM", img: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=700&q=80" },
+  { id: 11, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Battle of the Bands", desc: "Local bands compete on stage for prizes and bragging rights.", date: "Tue & Fri", time: "9:00 PM", img: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=700&q=80" },
+  { id: 12, badge: "Special", badgeColor: "linear-gradient(135deg,#ff9d00,#ff2d9b)", title: "Celebrity Guest Night", desc: "Special performances by international LGBTQ+ artists. Limited tickets.", date: "Sat, July 19", time: "10:00 PM", img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=700&q=80" },
 ];
 
-const EVENTS_PER_PAGE = 6;
+export default function Shows() {
+  const [filter, setFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 6;
 
-export function ShowPage() {
-  const [currentPage, setCurrentPage] = useState(1);
+  const tabs = [
+    "All",
+    "Tonight",
+    "Weekly",
+    "Weekends",
+    "Special",
+    "Monthly",
+    "Coming Soon",
+  ];
 
-  const totalPages = Math.ceil(events.length / EVENTS_PER_PAGE);
-  const startIdx = (currentPage - 1) * EVENTS_PER_PAGE;
-  const currentEvents = events.slice(startIdx, startIdx + EVENTS_PER_PAGE);
+  const filteredShows =
+    filter === "All"
+      ? SHOWS
+      : SHOWS.filter(
+          (s) =>
+            s.badge === filter ||
+            (filter === "Weekends" && s.badge === "Weekends"),
+        );
 
-  const goToPage = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const totalPages = Math.ceil(filteredShows.length / itemsPerPage);
+  const paginatedShows = filteredShows.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage,
+  );
 
   return (
-    <section id="events">
-      <style>{`
-        /* ── Event card: full-bleed image + hover overlay ── */
-        .show-card {
-          position: relative;
-          border-radius: 20px;
-          overflow: hidden;
-          cursor: pointer;
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
-          height: 360px;
-        }
-        .show-card:hover {
-          transform: translateY(-6px);
-          box-shadow:
-            0 20px 60px rgba(0, 0, 0, 0.6),
-            0 0 40px rgba(255, 45, 155, 0.15);
-          border-color: rgba(255, 45, 155, 0.35);
-        }
-
-        /* Full-bleed image */
-        .show-card-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          transition: transform 0.45s ease;
-        }
-        .show-card:hover .show-card-img {
-          transform: scale(1.07);
-        }
-
-        /* Badge — always visible, top-left */
-        .show-card-badge {
-          position: absolute;
-          top: 14px;
-          left: 14px;
-          z-index: 3;
-        }
-
-        /* Overlay — fades in on hover */
-        .show-card-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            to top,
-            rgba(6, 6, 20, 0.97) 0%,
-            rgba(6, 6, 20, 0.75) 40%,
-            rgba(6, 6, 20, 0.1) 70%,
-            transparent 100%
-          );
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          align-items: flex-start;
-          padding: 28px;
-          gap: 5px;
-          opacity: 0;
-          transform: translateY(8px);
-          transition: opacity 0.3s ease, transform 0.3s ease;
-          border-radius: 20px;
-          z-index: 2;
-        }
-        .show-card:hover .show-card-overlay {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        .show-card-overlay .event-date {
-          font-size: 11px;
-          color: var(--neon-pink);
-          letter-spacing: 2px;
-          text-transform: uppercase;
-        }
-        .show-card-overlay .event-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #fff;
-          line-height: 1.25;
-        }
-        .show-card-overlay .event-desc {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.7);
-          line-height: 1.5;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        /* badge-soon variant (not in globals) */
-        .badge-soon {
-          background: rgba(255, 200, 0, 0.18);
-          color: #ffc800;
-          border: 1px solid rgba(255, 200, 0, 0.45);
-          padding: 5px 12px;
-          border-radius: 50px;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-        }
-      `}</style>
-
-      <div className="events-inner">
-        <div className="events-header">
-          <div>
-            <div className="section-eyebrow">What's On</div>
-            <h2 className="section-title">
-              Upcoming<br />
-              <span style={{
-                background: "linear-gradient(90deg, var(--neon-pink), var(--neon-purple))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}>
-                Events & Shows
-              </span>
-            </h2>
-          </div>
+    <div className="w-full text-white bg-[#060614]">
+      {/* SECTION 1 - Cinematic Banner */}
+      <section className="relative h-[90vh] flex flex-col items-center justify-center">
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1400&q=80"
+            alt="Club stage at night"
+            className="w-full h-full object-cover opacity-50"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-[#060614]/80 to-[#060614]" />
         </div>
 
-        {/* Cards Grid */}
-        <div className="events-grid">
-          {currentEvents.map((event) => (
-            <div key={event.id} className="show-card">
-              {/* Always-visible badge */}
-              <span className={`event-badge ${event.badge} show-card-badge`}>
-                {event.badgeText}
-              </span>
+        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
+          <motion.span
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-[11px] uppercase tracking-[0.4em] text-[var(--neon-blue)] font-bold mb-6 block"
+          >
+            What's On At Rapture
+          </motion.span>
 
-              {/* Full-bleed image */}
-              <img
-                className="show-card-img"
-                src={event.img}
-                alt={event.title}
-                loading="lazy"
-              />
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-[clamp(40px,8vw,80px)] leading-[1.1] font-black tracking-tight mb-6"
+          >
+            Live, Loud & <br />{" "}
+            <span className="text-gradient">Unapologetic</span>
+          </motion.h1>
 
-              {/* Hover overlay */}
-              <div className="show-card-overlay">
-                <div className="event-date">{event.date}</div>
-                <div className="event-title">{event.title}</div>
-                <div className="event-desc">{event.desc}</div>
-              </div>
-            </div>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-lg md:text-xl text-white/70 font-medium max-w-2xl mx-auto mb-10"
+          >
+            From drag extravaganzas to intimate comedy sets — every night is an
+            event.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="flex flex-col sm:flex-row items-center gap-4"
+          >
+            <Link
+              href="/contact"
+              className="bg-gradient-to-r from-[var(--neon-pink)] to-[var(--neon-purple)] text-white px-8 py-4 rounded-full text-sm font-bold uppercase tracking-widest shadow-[0_0_25px_rgba(255,45,155,0.3)] hover:shadow-[0_0_35px_rgba(255,45,155,0.6)] transition-all hover:-translate-y-1"
+            >
+              Book a Table
+            </Link>
+            <button
+              onClick={() =>
+                document
+                  .getElementById("shows-grid")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="w-12 h-12 rounded-full border-2 border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white/50 hover:bg-white/10 transition-all"
+              aria-label="Scroll down"
+            >
+              <ChevronDown size={20} />
+            </button>
+          </motion.div>
+        </div>
+
+        {/* Animated scroll indicator */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50 animate-bounce">
+          <div className="w-[1px] h-12 bg-gradient-to-b from-transparent to-white" />
+        </div>
+      </section>
+
+      {/* SECTION 2 - Shows Grid */}
+      <section id="shows-grid" className="py-24 px-4 max-w-7xl mx-auto">
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-16">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => {
+                setFilter(tab);
+                setPage(1);
+              }}
+              className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all border ${
+                filter === tab
+                  ? "bg-white/10 border-[var(--neon-blue)] text-white shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+                  : "bg-transparent border-white/10 text-white/60 hover:text-white hover:border-white/30"
+              }`}
+            >
+              {tab}
+            </button>
           ))}
         </div>
 
-        {/* Pagination */}
-        <div className="pagination-row">
-          <button
-            className="page-btn"
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft size={16} /> Previous
-          </button>
+        {/* Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16 min-h-[400px]">
+          {paginatedShows.map((show) => (
+            <motion.div
+              key={show.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="group relative h-[360px] rounded-2xl overflow-hidden border border-white/10 cursor-pointer neon-border hover-glow"
+            >
+              <img
+                src={show.img}
+                alt={show.title}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
 
-          <div className="page-numbers">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                className={`page-num${p === currentPage ? " active" : ""}`}
-                onClick={() => goToPage(p)}
+              <div
+                className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-md text-xs font-bold text-white shadow-lg backdrop-blur-sm"
+                style={{ background: show.badgeColor }}
               >
-                {p}
+                {show.badge}
+              </div>
+
+              {/* Hover overlay that slides up */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#060614] via-[#060614]/80 to-transparent translate-y-8 group-hover:translate-y-0 opacity-80 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
+                <h3 className="text-2xl font-black mb-2 text-white leading-tight">
+                  {show.title}
+                </h3>
+                <div className="flex items-center gap-3 text-sm text-[var(--neon-blue)] font-bold mb-3">
+                  <span>{show.date}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-pink)]" />
+                  <span>{show.time}</span>
+                </div>
+                <p className="text-sm text-white/80 line-clamp-3 mb-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                  {show.desc}
+                </p>
+                <Link
+                  href="/contact"
+                  className="w-fit text-xs font-bold uppercase tracking-widest text-[var(--neon-pink)] hover:text-white transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-150"
+                >
+                  Book This Event <ArrowRight size={14} />
+                </Link>
+              </div>
+            </motion.div>
+          ))}
+          {paginatedShows.length === 0 && (
+            <div className="col-span-full py-20 text-center text-white/50 flex flex-col items-center">
+              <span className="text-4xl mb-4">🎭</span>
+              <p className="text-xl font-bold">
+                No shows found for this category.
+              </p>
+              <button
+                onClick={() => setFilter("All")}
+                className="mt-4 text-[var(--neon-blue)] hover:underline"
+              >
+                View all shows
               </button>
-            ))}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-6 mb-24">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-3 rounded-full border border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex gap-2">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  className={`w-3 h-3 rounded-full transition-all ${page === i + 1 ? "bg-[var(--neon-pink)] scale-125" : "bg-white/20 hover:bg-white/40"}`}
+                  aria-label={`Page ${i + 1}`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="p-3 rounded-full border border-white/20 text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+            >
+              <ArrowRight size={20} />
+            </button>
+          </div>
+        )}
+
+        {/* Newsletter Strip */}
+        <div className="bg-glass rounded-3xl p-8 md:p-12 border border-[rgba(0,212,255,0.2)] flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[var(--neon-pink)] rounded-full blur-[120px] opacity-10 pointer-events-none" />
+
+          <div className="relative z-10 max-w-lg text-center md:text-left">
+            <h3 className="text-2xl font-black mb-2">
+              Get show drops straight to your inbox
+            </h3>
+            <p className="text-white/60">
+              We sell out fast. Be the first to know about special events, big
+              headliners, and secret sets.
+            </p>
           </div>
 
-          <button
-            className="page-btn"
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next <ChevronRight size={16} />
-          </button>
+          <div className="relative z-10 w-full md:w-auto flex flex-col sm:flex-row gap-3 min-w-[320px]">
+            <input
+              type="email"
+              placeholder="Your email address"
+              className="bg-black/50 border border-white/10 rounded-full px-6 py-4 outline-none focus:border-[var(--neon-blue)] text-white w-full transition-colors"
+            />
+            <button className="bg-white text-black font-bold uppercase tracking-widest text-sm px-8 py-4 rounded-full hover:bg-[var(--neon-blue)] hover:text-white transition-colors shrink-0">
+              Subscribe
+            </button>
+          </div>
         </div>
-
-        <div className="page-info">
-          Page {currentPage} of {totalPages} · Showing {startIdx + 1}–
-          {Math.min(startIdx + EVENTS_PER_PAGE, events.length)} of {events.length} events
-        </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
-
-export default ShowPage;

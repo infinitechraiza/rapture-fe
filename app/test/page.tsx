@@ -249,7 +249,7 @@ export default function Home() {
                 lineHeight: 1,
               }}
             >
-              Rapture Comedy Bar & Cafe
+              Rapture Cafe Bar
             </div>
             <div
               style={{
@@ -421,7 +421,7 @@ export default function Home() {
             className={styles.heroSub}
             style={{ maxWidth: 500, margin: "0 auto 2rem" }}
           >
-            Crafted from nature, trusted by institutions. Rapture Comedy Bar & Cafe delivers
+            Crafted from nature, trusted by institutions. Rapture Cafe Bar delivers
             premium tissue solutions to homes, hotels, hospitals, and
             corporations across the Philippines.
           </p>
@@ -562,7 +562,7 @@ export default function Home() {
           ))}
         </div>
       </div>
-      {/* ── Why Choose Rapture Comedy Bar & Cafe ── */}
+      {/* ── Why Choose Rapture Cafe Bar ── */}
       <section
         style={{
           backgroundColor: "#f5f9f2",
@@ -609,7 +609,7 @@ export default function Home() {
         >
           Why choose{" "}
           <em style={{ fontStyle: "italic", color: "#2E7D4F" }}>
-          Rapture Comedy Bar & Cafe?
+          Rapture Cafe Bar?
           </em>
         </div>
 
@@ -1034,7 +1034,7 @@ export default function Home() {
                 marginBottom: "1.5rem",
               }}
             >
-              Rapture Comedy Bar & Cafe Corporation has been a trusted name in the Philippine
+              Rapture Cafe Bar Corporation has been a trusted name in the Philippine
               tissue industry for over two decades. We serve hotel chains,
               hospital networks, restaurant groups, and government offices with
               consistent quality, reliable logistics, and corporate-scale
@@ -1313,7 +1313,7 @@ export default function Home() {
                   className="text-[13px] font-bold tracking-[0.08em] uppercase leading-tight"
                   style={{ color: "#E8F5EE" }}
                 >
-                  Rapture Comedy Bar & Cafe
+                  Rapture Cafe Bar
                 </div>
                 {/* #a7e667 removed — now muted green */}
                 <div

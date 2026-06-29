@@ -16,7 +16,7 @@ function getAuthToken(request: NextRequest): string | null {
 // GET /api/event/[id]
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: { id: string } },
 ) {
   try {
     const token = getAuthToken(request);
@@ -41,7 +41,7 @@ export async function GET(
         message: "Failed to fetch event.",
         error: err instanceof Error ? err.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -49,7 +49,7 @@ export async function GET(
 // PUT /api/event/[id]
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: { id: string } },
 ) {
   try {
     const token = getAuthToken(request);
@@ -76,7 +76,7 @@ export async function PUT(
         message: "Failed to update event.",
         error: err instanceof Error ? err.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

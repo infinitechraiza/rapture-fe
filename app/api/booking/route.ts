@@ -231,7 +231,7 @@ async function sendEmails({
     <tr><td style="height:1px;background:linear-gradient(90deg,transparent,rgba(255, 0, 204, 0.3),transparent);padding:0;"></td></tr>
     <tr>
       <td align="center" style="padding:16px 24px;">
-        <p style="margin:0 0 2px;font-size:11px;color:rgba(255,255,255,0.2);">© ${new Date().getFullYear()} Rapture Comedy Bar & Cafe · Mon–Sat: 9AM–7PM</p>
+        <p style="margin:0 0 2px;font-size:11px;color:rgba(255,255,255,0.2);">© ${new Date().getFullYear()} Rapture Cafe Bar · Mon–Sat: 9AM–7PM</p>
         <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.2);">This is an automated message — please do not reply.</p>
       </td>
     </tr>`;
@@ -240,13 +240,13 @@ async function sendEmails({
 
   // ── Customer email ──────────────────────────────────────────
   await transporter.sendMail({
-    from: `"Rapture Comedy Bar & Cafe" <${process.env.SMTP_USER}>`,
+    from: `"Rapture Cafe Bar" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: "Booking Request Received — Rapture Comedy Bar & Cafe",
+    subject: "Booking Request Received — Rapture Cafe Bar",
     html: `
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Booking Received – Rapture Comedy Bar & Cafe</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Booking Received – Rapture Cafe Bar</title></head>
 <body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#070b14;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#070b14;padding:24px 16px;">
     <tr><td align="center">
@@ -260,7 +260,7 @@ async function sendEmails({
               <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #ff2d9b, #c0157a); display: inline-block; vertical-align: middle;"></div>
             </div>
             <p style="margin:0 0 2px;font-family:Georgia,serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#ff2d9b;">Booking</p>
-            <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:1px;">Rapture Comedy Bar & Cafe</h1>
+            <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:1px;">Rapture Cafe Bar</h1>
           </td>
         </tr>
 
@@ -328,13 +328,13 @@ async function sendEmails({
 
   // ── Admin email ─────────────────────────────────────────────
   await transporter.sendMail({
-    from: `"Rapture Comedy Bar & Cafe System" <${process.env.SMTP_USER}>`,
+    from: `"Rapture Cafe Bar System" <${process.env.SMTP_USER}>`,
     to: adminEmail,
     subject: `New Booking — ${name}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>New Booking – Rapture Comedy Bar & Cafe</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>New Booking – Rapture Cafe Bar</title></head>
 <body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#070b14;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#070b14;padding:24px 16px;">
     <tr><td align="center">
@@ -348,7 +348,7 @@ async function sendEmails({
               <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#0099cc);display:inline-block;vertical-align:middle;"></div>
             </div>
             <p style="margin:0 0 2px;font-family:Georgia,serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#00d4ff;">New Booking</p>
-            <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:1px;">Rapture Comedy Bar & Cafe</h1>
+            <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:1px;">Rapture Cafe Bar</h1>
             <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.4);">Admin Notification</p>
           </td>
         </tr>
