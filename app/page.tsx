@@ -1,4 +1,3 @@
-
 import { HeroSection } from "@/components/hero/HeroSection";
 import { MarqueeWrap } from "@/components/marquee-wrap";
 import { NeonDivider } from "@/components/neon-divider";
@@ -32,7 +31,6 @@ export default function HomePage() {
 
         <CTASection />
       </main>
-
     </div>
   );
 }

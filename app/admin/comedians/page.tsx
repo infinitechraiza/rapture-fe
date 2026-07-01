@@ -1,7 +1,7 @@
 "use client";
 
 import { Search, Plus, Trash2, Edit2, Upload, X, User, Eye, Calendar, Tag, Quote } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Comedian {
@@ -24,6 +24,90 @@ const genreColors: Record<string, string> = {
   Sarcasm: "#06b6d4",
   Default: "var(--text-soft)",
 };
+
+// ── Stat pill (matches Users page header) ───────────────────
+
+function HeaderStat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number | string;
+  accent: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: "10px 16px",
+        borderRadius: 12,
+        background: "var(--card-mid)",
+        border: "1px solid rgba(0,212,255,0.12)",
+        minWidth: 96,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 20,
+          fontWeight: 800,
+          color: accent,
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </p>
+      <p
+        style={{
+          margin: "2px 0 0",
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          color: "var(--text-muted)",
+        }}
+      >
+        {label}
+      </p>
+    </div>
+  );
+}
+
+// ── Row action icon button (matches Users page) ─────────────
+
+function RowActionButton({
+  icon,
+  title,
+  onClick,
+  danger,
+}: {
+  icon: ReactNode;
+  title: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  const idleColor = danger ? "var(--neon-pink)" : "var(--text-muted)";
+  const hoverBg = danger ? "rgba(255,45,155,0.12)" : "rgba(0,212,255,0.1)";
+  const hoverColor = danger ? "var(--neon-pink)" : "var(--neon-blue)";
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200"
+      style={{ color: idleColor, background: "transparent" }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = hoverBg;
+        (e.currentTarget as HTMLButtonElement).style.color = hoverColor;
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+        (e.currentTarget as HTMLButtonElement).style.color = idleColor;
+      }}
+    >
+      {icon}
+    </button>
+  );
+}
 
 export default function ComediansPage() {
   const { toast } = useToast();
@@ -246,6 +330,9 @@ export default function ComediansPage() {
       false,
   );
 
+  const activeCount = comedians.filter((c) => c.status === "active").length;
+  const inactiveCount = comedians.filter((c) => c.status === "inactive").length;
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -263,54 +350,97 @@ export default function ComediansPage() {
     });
   };
 
+  const gridCols = "1.3fr 1.3fr 0.8fr 0.9fr 0.9fr 120px";
+
   return (
     <div className="h-full space-y-6 flex-1 overflow-y-auto p-6 min-h-screen">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1
-            className="text-xl font-bold"
-            style={{ color: "var(--text-bright)" }}
-          >
-            Comedians
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
-            {comedians.length} total comedians
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setForm({
-              name: "",
-              tagline: "",
-              image: "",
-              genre: "",
-              bio: "",
-              status: "active",
-            });
-            setImagePreview("");
-            openModal();
-          }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+      {/* ── Header ── */}
+      <div
+        style={{
+          position: "relative",
+          borderRadius: 18,
+          padding: "26px 28px",
+          overflow: "hidden",
+          background: "linear-gradient(135deg, rgba(0,212,255,0.08), rgba(185,79,255,0.06) 60%, transparent)",
+          border: "1px solid rgba(0,212,255,0.12)",
+        }}
+      >
+        <div
+          aria-hidden
           style={{
-            background:
-              "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-            color: "white",
-            boxShadow: "0 0 16px rgba(0,212,255,0.3)",
+            position: "absolute",
+            top: -60,
+            right: -40,
+            width: 220,
+            height: 220,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(0,212,255,0.18), transparent 70%)",
+            pointerEvents: "none",
           }}
-        >
-          <Plus size={14} />
-          Add Comedian
-        </button>
+        />
+        <div className="flex items-center justify-between flex-wrap gap-4" style={{ position: "relative" }}>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+                color: "var(--neon-blue)",
+              }}
+            >
+              Talent Management
+            </p>
+            <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "var(--text-bright)", letterSpacing: -0.5 }}>
+              Comedians
+            </h1>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
+              Manage profiles, categories, and status across your roster.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <HeaderStat label="Total" value={comedians.length} accent="var(--neon-blue)" />
+            <HeaderStat label="Active" value={activeCount} accent="#10b981" />
+            <HeaderStat label="Inactive" value={inactiveCount} accent="var(--text-muted)" />
+
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setForm({
+                  name: "",
+                  tagline: "",
+                  image: "",
+                  genre: "",
+                  bio: "",
+                  status: "active",
+                });
+                setImagePreview("");
+                openModal();
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200"
+              style={{
+                background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
+                color: "white",
+                boxShadow: "0 0 16px rgba(0,212,255,0.3)",
+              }}
+            >
+              <Plus size={14} />
+              Add Comedian
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* ── Table card ── */}
       <div className="card-neon">
-        {/* Search bar */}
+        {/* Search + filters */}
         <div
-          className="p-4 pb-3"
+          className="flex items-center justify-between gap-4 flex-wrap p-4"
           style={{ borderBottom: "1px solid rgba(0,212,255,0.08)" }}
         >
-          <div className="relative max-w-xs">
+          <div className="relative max-w-xs flex-1 min-w-[200px]">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2"
@@ -329,27 +459,22 @@ export default function ComediansPage() {
               }}
             />
           </div>
-        </div>
 
-        {/* Status Filter */}
-        <div
-          className="flex gap-2 px-5 py-3"
-          style={{ borderBottom: "1px solid rgba(0,212,255,0.08)" }}
-        >
-          {["all", "active", "inactive"].map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatus(s)}
-              className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
-              style={{
-                background:
-                  status === s ? "var(--neon-blue)" : "rgba(0,212,255,0.1)",
-                color: status === s ? "white" : "var(--text-soft)",
-              }}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
+          <div className="flex gap-2">
+            {["all", "active", "inactive"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatus(s)}
+                className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  background: status === s ? "var(--neon-blue)" : "rgba(0,212,255,0.1)",
+                  color: status === s ? "white" : "var(--text-soft)",
+                }}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Table Header */}
@@ -358,7 +483,7 @@ export default function ComediansPage() {
           style={{
             color: "var(--text-muted)",
             borderBottom: "1px solid rgba(0,212,255,0.08)",
-            gridTemplateColumns: "1fr 1fr 120px 110px 110px 90px",
+            gridTemplateColumns: gridCols,
           }}
         >
           <span>Name</span>
@@ -370,17 +495,11 @@ export default function ComediansPage() {
         </div>
 
         {loading ? (
-          <div
-            className="text-center py-8"
-            style={{ color: "var(--text-muted)" }}
-          >
+          <div className="text-center py-8" style={{ color: "var(--text-muted)" }}>
             Loading comedians...
           </div>
         ) : filtered.length === 0 ? (
-          <div
-            className="text-center py-8"
-            style={{ color: "var(--text-muted)" }}
-          >
+          <div className="text-center py-8" style={{ color: "var(--text-muted)" }}>
             No comedians found
           </div>
         ) : (
@@ -390,19 +509,13 @@ export default function ComediansPage() {
               onClick={() => openViewDrawer(comedian)}
               className="grid items-center px-5 py-3 transition-all duration-200 cursor-pointer"
               style={{
-                gridTemplateColumns: "1fr 1fr 120px 110px 110px 90px",
-                borderBottom:
-                  i < filtered.length - 1
-                    ? "1px solid rgba(0,212,255,0.06)"
-                    : "none",
+                gridTemplateColumns: gridCols,
+                borderBottom: i < filtered.length - 1 ? "1px solid rgba(0,212,255,0.06)" : "none",
               }}
               onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLDivElement).style.background =
-                  "rgba(0,212,255,0.03)")
+                ((e.currentTarget as HTMLDivElement).style.background = "rgba(0,212,255,0.03)")
               }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLDivElement).style.background = "")
-              }
+              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "")}
             >
               {/* Name with Avatar */}
               <div className="flex items-center gap-2.5">
@@ -424,14 +537,17 @@ export default function ComediansPage() {
                 )}
                 <span
                   className="text-sm font-medium"
-                  style={{ color: "var(--text-bright)" }}
+                  style={{ color: "var(--text-bright)", whiteSpace: "normal", wordBreak: "break-word" }}
                 >
                   {comedian.name}
                 </span>
               </div>
 
               {/* Tagline */}
-              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+              <span
+                className="text-sm"
+                style={{ color: "var(--text-muted)", whiteSpace: "normal", wordBreak: "break-word" }}
+              >
                 {comedian.tagline || "—"}
               </span>
 
@@ -439,9 +555,7 @@ export default function ComediansPage() {
               <span
                 className="text-xs font-medium px-2 py-1 rounded-md w-fit"
                 style={{
-                  color:
-                    genreColors[comedian.genre || "Default"] ||
-                    genreColors.Default,
+                  color: genreColors[comedian.genre || "Default"] || genreColors.Default,
                   background: "rgba(0,212,255,0.08)",
                 }}
               >
@@ -453,23 +567,16 @@ export default function ComediansPage() {
                 <div
                   className="w-1.5 h-1.5 rounded-full"
                   style={{
-                    background:
-                      comedian.status === "active"
-                        ? "var(--neon-blue)"
-                        : "var(--text-muted)",
+                    background: comedian.status === "active" ? "var(--neon-blue)" : "var(--text-muted)",
                   }}
                 />
                 <span
                   className="text-sm"
                   style={{
-                    color:
-                      comedian.status === "active"
-                        ? "var(--neon-blue)"
-                        : "var(--text-muted)",
+                    color: comedian.status === "active" ? "var(--neon-blue)" : "var(--text-muted)",
                   }}
                 >
-                  {comedian.status.charAt(0).toUpperCase() +
-                    comedian.status.slice(1)}
+                  {comedian.status.charAt(0).toUpperCase() + comedian.status.slice(1)}
                 </span>
               </div>
 
@@ -479,73 +586,15 @@ export default function ComediansPage() {
               </span>
 
               {/* Actions */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openViewDrawer(comedian);
-                  }}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200"
-                  style={{
-                    color: "var(--text-muted)",
-                    background: "transparent",
-                  }}
-                  onMouseEnter={(e) =>
-                    ((e.currentTarget as HTMLButtonElement).style.background =
-                      "rgba(0,212,255,0.1)")
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLButtonElement).style.background =
-                      "transparent")
-                  }
-                  title="View"
-                >
-                  <Eye size={13} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEdit(comedian);
-                  }}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200"
-                  style={{
-                    color: "var(--text-muted)",
-                    background: "transparent",
-                  }}
-                  onMouseEnter={(e) =>
-                    ((e.currentTarget as HTMLButtonElement).style.background =
-                      "rgba(0,212,255,0.1)")
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLButtonElement).style.background =
-                      "transparent")
-                  }
-                  title="Edit"
-                >
-                  <Edit2 size={13} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(comedian.id);
-                  }}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200"
-                  style={{
-                    color: "var(--neon-pink)",
-                    background: "transparent",
-                  }}
-                  onMouseEnter={(e) =>
-                    ((e.currentTarget as HTMLButtonElement).style.background =
-                      "rgba(255,45,155,0.1)")
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLButtonElement).style.background =
-                      "transparent")
-                  }
+              <div className="flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
+                <RowActionButton icon={<Eye size={14} />} title="View" onClick={() => openViewDrawer(comedian)} />
+                <RowActionButton icon={<Edit2 size={14} />} title="Edit" onClick={() => handleEdit(comedian)} />
+                <RowActionButton
+                  icon={<Trash2 size={14} />}
                   title="Delete"
-                >
-                  <Trash2 size={13} />
-                </button>
+                  danger
+                  onClick={() => handleDelete(comedian.id)}
+                />
               </div>
             </div>
           ))
@@ -562,23 +611,25 @@ export default function ComediansPage() {
             style={{
               position: "absolute",
               inset: 0,
-              background: "rgba(5,8,16,0.72)",
-              backdropFilter: "blur(2px)",
+              background: "rgba(6,6,20,0.8)",
+              backdropFilter: "blur(8px)",
             }}
           />
 
           {/* Panel */}
           <div
-            className={isClosing ? "drawer-panel drawer-panel-out" : "drawer-panel drawer-panel-in"}
+            className={(isClosing ? "drawer-panel drawer-panel-out" : "drawer-panel drawer-panel-in") + " card-neon"}
             style={{
               position: "absolute",
               top: 0,
               right: 0,
               height: "100%",
               width: "min(440px, 100vw)",
-              background: "var(--card-bg, #0b0f1a)",
-              borderLeft: "1px solid rgba(0,212,255,0.18)",
-              boxShadow: "-24px 0 64px -16px rgba(0,0,0,0.65), -1px 0 0 rgba(0,212,255,0.08)",
+              borderRadius: 0,
+              borderTop: "none",
+              borderRight: "none",
+              borderBottom: "none",
+              boxShadow: "0 0 60px rgba(0,212,255,0.15)",
               display: "flex",
               flexDirection: "column",
             }}
@@ -830,7 +881,7 @@ export default function ComediansPage() {
               className="flex items-center gap-2.5 px-6 py-4 shrink-0"
               style={{
                 borderTop: "1px solid rgba(0,212,255,0.1)",
-                background: "var(--card-bg, #0b0f1a)",
+                background: "transparent",
               }}
             >
               <button
@@ -885,15 +936,15 @@ export default function ComediansPage() {
             style={{
               position: "absolute",
               inset: 0,
-              background: "rgba(5,8,16,0.72)",
-              backdropFilter: "blur(2px)",
+              background: "rgba(6,6,20,0.8)",
+              backdropFilter: "blur(8px)",
             }}
           />
 
           {/* Panel */}
           <div
             className={
-              isViewClosing ? "drawer-panel drawer-panel-out" : "drawer-panel drawer-panel-in"
+              (isViewClosing ? "drawer-panel drawer-panel-out" : "drawer-panel drawer-panel-in") + " card-neon"
             }
             style={{
               position: "absolute",
@@ -901,10 +952,11 @@ export default function ComediansPage() {
               right: 0,
               height: "100%",
               width: "min(440px, 100vw)",
-              background: "var(--card-bg, #0b0f1a)",
-              borderLeft: "1px solid rgba(0,212,255,0.18)",
-              boxShadow:
-                "-24px 0 64px -16px rgba(0,0,0,0.65), -1px 0 0 rgba(0,212,255,0.08)",
+              borderRadius: 0,
+              borderTop: "none",
+              borderRight: "none",
+              borderBottom: "none",
+              boxShadow: "0 0 60px rgba(0,212,255,0.15)",
               display: "flex",
               flexDirection: "column",
             }}
@@ -1120,7 +1172,7 @@ export default function ComediansPage() {
               className="flex items-center gap-2.5 px-6 py-4 shrink-0"
               style={{
                 borderTop: "1px solid rgba(0,212,255,0.1)",
-                background: "var(--card-bg, #0b0f1a)",
+                background: "transparent",
               }}
             >
               <button

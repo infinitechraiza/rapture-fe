@@ -1,4 +1,7 @@
-import { useState } from 'react';
+"use client";
+
+
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';

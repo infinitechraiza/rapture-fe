@@ -2,7 +2,9 @@
 
 import { useState, FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Eye, EyeOff, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import RaptureLogo from "../rapture_logo.png";
 
 // ── Types ────────────────────────────────────────────────────
 interface LoginForm {
@@ -21,26 +23,19 @@ function LogoIcon() {
   return (
     <div
       style={{
-        width: 56,
-        height: 56,
+        width: 80,
+        height: 80,
         borderRadius: "50%",
         background: "rgba(0,212,255,0.12)",
-        border: "1px solid rgba(255,255,255,0.15)",
+        border: "1px solid rgba(0, 0, 0, 0.15)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         boxShadow:
-          "0 0 30px rgba(0,212,255,0.35), 0 0 50px rgba(255,45,155,0.2)",
+          "0 0 30px rgba(0, 0, 0, 0.35), 0 0 50px rgba(30, 22, 26, 0.2)",
       }}
     >
-      <div
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, #00d4ff, #ff2d9b)",
-        }}
-      />
+      <Image src={RaptureLogo} alt="Rapture Logo" width={64} height={64} />
     </div>
   );
 }
@@ -78,12 +73,6 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      // Laravel Sanctum: first get CSRF cookie, then login
-      // await fetch("/sanctum/csrf-cookie", {
-      //   method: "GET",
-      //   credentials: "include",
-      // });
-
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -114,7 +103,7 @@ export default function LoginPage() {
         localStorage.setItem("auth_token", data.token);
       }
 
-      const role = data.data?.user?.user_role; // adjust path once confirmed
+      const role = data.data?.user?.user_role;
 
       if (role) {
         localStorage.setItem("auth_role", role);
@@ -125,8 +114,6 @@ export default function LoginPage() {
       } else {
         window.location.href = "/";
       }
-
-      
     } catch {
       setErrors({
         general: "Cannot connect to server. Please check your connection.",
@@ -185,9 +172,254 @@ export default function LoginPage() {
         .forgot-link { transition: color 0.2s; }
         .forgot-link:hover { color: #ff2d9b !important; }
         .back-link:hover { color: rgba(255,255,255,0.5) !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      {/* ── Grid background ── */}
+      {/* ── Lava lamp blobs — identical to hero section ── */}
+      <div className="lava-lamp" aria-hidden="true">
+        <div className="lava-blob lb1" />
+        <div className="lava-blob lb2" />
+        <div className="lava-blob lb3" />
+        <div className="lava-blob lb4" />
+      </div>
+
+      {/* ── Floating orbs — same set/sizes/timings as hero, trimmed to 10 ── */}
+      <div className="hero-neon-orbs" aria-hidden="true">
+        <div
+          className="hero-orb ob1"
+          style={{
+            left: "38%",
+            top: "60%",
+            width: 680,
+            height: 680,
+            animationDuration: "12s",
+            animationDelay: "0s",
+          }}
+        />
+        <div
+          className="hero-orb op1"
+          style={{
+            left: "55%",
+            top: "85%",
+            width: 450,
+            height: 450,
+            animationDuration: "15s",
+            animationDelay: "1s",
+          }}
+        />
+        <div
+          className="hero-orb ob2"
+          style={{
+            left: "70%",
+            top: "55%",
+            width: 320,
+            height: 320,
+            animationDuration: "8s",
+            animationDelay: "5s",
+          }}
+        />
+        <div
+          className="hero-orb op2"
+          style={{
+            left: "60%",
+            top: "30%",
+            width: 400,
+            height: 400,
+            animationDuration: "11s",
+            animationDelay: "2s",
+          }}
+        />
+        <div
+          className="hero-orb ob3"
+          style={{
+            left: "48%",
+            top: "15%",
+            width: 600,
+            height: 600,
+            animationDuration: "14s",
+            animationDelay: "6s",
+          }}
+        />
+        <div
+          className="hero-orb op3"
+          style={{
+            left: "20%",
+            top: "65%",
+            width: 380,
+            height: 380,
+            animationDuration: "13s",
+            animationDelay: "4s",
+          }}
+        />
+        <div
+          className="hero-orb ob4"
+          style={{
+            left: "5%",
+            top: "20%",
+            width: 320,
+            height: 320,
+            animationDuration: "10s",
+            animationDelay: "3s",
+          }}
+        />
+        <div
+          className="hero-orb op4"
+          style={{
+            left: "85%",
+            top: "15%",
+            width: 320,
+            height: 320,
+            animationDuration: "9s",
+            animationDelay: "2s",
+          }}
+        />
+        <div
+          className="hero-orb ob1"
+          style={{
+            left: "90%",
+            top: "70%",
+            width: 500,
+            height: 500,
+            animationDuration: "11s",
+            animationDelay: "7s",
+          }}
+        />
+        <div
+          className="hero-orb op1"
+          style={{
+            left: "10%",
+            top: "85%",
+            width: 380,
+            height: 380,
+            animationDuration: "16s",
+            animationDelay: "0s",
+          }}
+        />
+        <div
+          className="hero-orb ob1"
+          style={{
+            left: "38%",
+            top: "60%",
+            width: 680,
+            height: 680,
+            animationDuration: "12s",
+            animationDelay: "0s",
+          }}
+        />
+        <div
+          className="hero-orb op1"
+          style={{
+            left: "55%",
+            top: "85%",
+            width: 450,
+            height: 450,
+            animationDuration: "15s",
+            animationDelay: "1s",
+          }}
+        />
+        <div
+          className="hero-orb ob2"
+          style={{
+            left: "70%",
+            top: "55%",
+            width: 320,
+            height: 320,
+            animationDuration: "8s",
+            animationDelay: "5s",
+          }}
+        />
+        <div
+          className="hero-orb op2"
+          style={{
+            left: "60%",
+            top: "30%",
+            width: 400,
+            height: 400,
+            animationDuration: "11s",
+            animationDelay: "2s",
+          }}
+        />
+        <div
+          className="hero-orb ob3"
+          style={{
+            left: "48%",
+            top: "15%",
+            width: 600,
+            height: 600,
+            animationDuration: "14s",
+            animationDelay: "6s",
+          }}
+        />
+        <div
+          className="hero-orb op3"
+          style={{
+            left: "20%",
+            top: "65%",
+            width: 380,
+            height: 380,
+            animationDuration: "13s",
+            animationDelay: "4s",
+          }}
+        />
+        <div
+          className="hero-orb ob4"
+          style={{
+            left: "5%",
+            top: "20%",
+            width: 320,
+            height: 320,
+            animationDuration: "10s",
+            animationDelay: "3s",
+          }}
+        />
+        <div
+          className="hero-orb op4"
+          style={{
+            left: "85%",
+            top: "15%",
+            width: 320,
+            height: 320,
+            animationDuration: "9s",
+            animationDelay: "2s",
+          }}
+        />
+        <div
+          className="hero-orb ob1"
+          style={{
+            left: "90%",
+            top: "70%",
+            width: 500,
+            height: 500,
+            animationDuration: "11s",
+            animationDelay: "7s",
+          }}
+        />
+        <div
+          className="hero-orb op1"
+          style={{
+            left: "10%",
+            top: "85%",
+            width: 380,
+            height: 380,
+            animationDuration: "16s",
+            animationDelay: "0s",
+          }}
+        />
+      </div>
+
+      {/* ── Dark veil so lava blobs show through, same as hero ── */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(6,6,20,0.35)",
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* ── Grid background (kept, sits above veil at low opacity) ── */}
       <div
         aria-hidden="true"
         style={{
@@ -198,35 +430,9 @@ export default function LoginPage() {
             "linear-gradient(rgba(99,102,241,1) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,1) 1px, transparent 1px)",
           backgroundSize: "60px 60px",
           pointerEvents: "none",
+          zIndex: 0,
         }}
       />
-
-      {/* ── Neon orbs — cyan + pink glow, hero-style ── */}
-      <div
-        aria-hidden="true"
-        style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-      >
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[3%] left-[8%] w-[22px] h-[22px] bg-[#00d4ff] opacity-50 blur-[13px] shadow-[0_0_33px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[6%] left-[32%] w-[14px] h-[14px] bg-[#ff2d9b] opacity-45 blur-[8px] shadow-[0_0_21px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[4%] right-[20%] w-[18px] h-[18px] bg-[#00d4ff] opacity-40 blur-[11px] shadow-[0_0_27px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[9%] right-[5%] w-[26px] h-[26px] bg-[#ff2d9b] opacity-50 blur-[16px] shadow-[0_0_39px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[14%] left-[16%] w-[16px] h-[16px] bg-[#ff2d9b] opacity-40 blur-[10px] shadow-[0_0_24px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[17%] left-[48%] w-[12px] h-[12px] bg-[#00d4ff] opacity-45 blur-[7px] shadow-[0_0_18px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[13%] right-[32%] w-[20px] h-[20px] bg-[#00d4ff] opacity-40 blur-[12px] shadow-[0_0_30px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[22%] left-[4%] w-[18px] h-[18px] bg-[#00d4ff] opacity-45 blur-[11px] shadow-[0_0_27px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[26%] left-[6%] w-[14px] h-[14px] bg-[#ff2d9b] opacity-40 blur-[8px] shadow-[0_0_21px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[21%] right-[12%] w-[24px] h-[24px] bg-[#ff2d9b] opacity-45 blur-[14px] shadow-[0_0_36px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[33%] left-[12%] w-[20px] h-[20px] bg-[#ff2d9b] opacity-40 blur-[12px] shadow-[0_0_30px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[36%] left-[40%] w-[16px] h-[16px] bg-[#00d4ff] opacity-45 blur-[10px] shadow-[0_0_24px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[31%] right-[6%] w-[14px] h-[14px] bg-[#00d4ff] opacity-40 blur-[8px] shadow-[0_0_21px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[48%] left-[6%] w-[24px] h-[24px] bg-[#00d4ff] opacity-45 blur-[14px] shadow-[0_0_36px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[55%] right-[10%] w-[20px] h-[20px] bg-[#00d4ff] opacity-45 blur-[12px] shadow-[0_0_30px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[62%] left-[44%] w-[18px] h-[18px] bg-[#ff2d9b] opacity-40 blur-[11px] shadow-[0_0_27px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[66%] right-[5%] w-[22px] h-[22px] bg-[#ff2d9b] opacity-40 blur-[13px] shadow-[0_0_33px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[74%] right-[18%] w-[20px] h-[20px] bg-[#00d4ff] opacity-40 blur-[12px] shadow-[0_0_30px_#00d4ff]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[86%] right-[4%] w-[24px] h-[24px] bg-[#ff2d9b] opacity-45 blur-[14px] shadow-[0_0_36px_#ff2d9b]" />
-        <div className="absolute h-[60px] w-[60px] rounded-full top-[92%] left-[12%] w-[18px] h-[18px] bg-[#00d4ff] opacity-45 blur-[11px] shadow-[0_0_27px_#00d4ff]" />
-      </div>
 
       {/* ── Scanline texture overlay ── */}
       <div
@@ -238,11 +444,19 @@ export default function LoginPage() {
           backgroundImage:
             "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.06) 2px, rgba(0,212,255,0.06) 4px)",
           pointerEvents: "none",
+          zIndex: 0,
         }}
       />
 
       {/* ── Card wrapper ── */}
-      <div style={{ position: "relative", width: "100%", maxWidth: 420 }}>
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "100%",
+          maxWidth: 420,
+        }}
+      >
         {/* Logo */}
         <div
           style={{
@@ -254,17 +468,6 @@ export default function LoginPage() {
           }}
         >
           <LogoIcon />
-          <span
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              fontSize: 22,
-              fontWeight: 700,
-              color: "#fff",
-              letterSpacing: "0.5px",
-            }}
-          >
-            RAPTURE
-          </span>
         </div>
 
         {/* Card */}
@@ -553,10 +756,6 @@ export default function LoginPage() {
           ← Back to landing page
         </Link>
       </div>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }

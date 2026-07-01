@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { X, ChevronRight, Star, Mic } from 'lucide-react';
@@ -136,7 +136,7 @@ export default function Comedians() {
       <section style={{ padding: '64px 24px 80px', background: 'linear-gradient(180deg, #060614 0%, #0b0720 50%, #060614 100%)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ marginBottom: 40 }}>
-            <span style={{ fontSize: 11, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#00d4ff', fontWeight: 700, display: 'block', marginBottom: 10 }}>The Full Lineup</span>
+            <span style={{ fontSize: 11, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#00d4ff', fontWeight: 700, display: 'block', marginBottom: 10 }}>The Full Roster</span>
             <h2 style={{ fontSize: 'clamp(28px,5vw,52px)', fontWeight: 900, margin: 0 }}>
               All <span className="text-gradient">Comedians</span>
             </h2>

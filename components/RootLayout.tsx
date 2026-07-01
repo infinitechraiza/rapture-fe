@@ -4,9 +4,10 @@ import { ReactNode, useState } from "react";
 import { usePathname } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
-import {Header} from "@/components/layout/header";           // public site navbar
-import {Footer} from "@/components/layout/footer";     // public site footer
+import { Header } from "@/components/layout/header"; // public site navbar
+import { Footer } from "@/components/layout/footer"; // public site footer
 import { ThemeProvider, useTheme } from "@/components/admin/ThemeProvider";
+import RaptureLoader from "@/components/RaptureLoader";
 
 /* ─────────────────────────────────────────────
    ADMIN SHELL
@@ -14,6 +15,11 @@ import { ThemeProvider, useTheme } from "@/components/admin/ThemeProvider";
 ───────────────────────────────────────────── */
 function AdminShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+
+  const handleToggle = () => {
+    setCollapsed((c) => !c);
+  };
+
   const { theme } = useTheme();
 
   return (
@@ -22,13 +28,10 @@ function AdminShell({ children }: { children: ReactNode }) {
       data-theme={theme}
       style={{ background: "var(--dark-navy)" }}
     >
-      <AdminSidebar collapsed={collapsed} />
+      <AdminSidebar collapsed={collapsed} onToggle={handleToggle} />
 
       <div className="flex flex-col flex-1 overflow-hidden">
-        <AdminHeader
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((c) => !c)}
-        />
+        <AdminHeader collapsed={collapsed} onToggle={handleToggle} />
         <main className="flex-1 overflow-y-auto p-6 min-h-screen">
           {children}
         </main>
@@ -68,7 +71,10 @@ function ShellRouter({ children }: { children: ReactNode }) {
   return isAdmin ? (
     <AdminShell>{children}</AdminShell>
   ) : (
-    <PublicShell>{children}</PublicShell>
+    <PublicShell>
+      <RaptureLoader />
+      {children}
+    </PublicShell>
   );
 }
 

@@ -11,13 +11,21 @@ import {
   Settings,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
+
+import RaptureLogo from "../../app/rapture_logo.png";
 
 const navSections = [
   {
     label: "Overview",
     items: [
       { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-      { label: "Analytics", href: "/admin/analytics", icon: BarChart2, badge: "New" },
+      {
+        label: "Analytics",
+        href: "/admin/analytics",
+        icon: BarChart2,
+        badge: "New",
+      },
     ],
   },
   {
@@ -27,17 +35,19 @@ const navSections = [
       { label: "Comedians", href: "/admin/comedians", icon: Users },
       { label: "About", href: "/admin/about", icon: Info },
       { label: "Events", href: "/admin/events", icon: Calendar },
-      { label: "Reservation", href: "/admin/reservation", icon: CalendarCheck, count: 12 },
+      {
+        label: "Reservation",
+        href: "/admin/reservation",
+        icon: CalendarCheck,
+        count: 12,
+      },
     ],
   },
   {
     label: "System",
-    items: [
-      { label: "Settings", href: "/admin/settings", icon: Settings },
-    ],
+    items: [{ label: "Settings", href: "/admin/settings", icon: Settings }],
   },
 ];
-
 
 interface SidebarProps {
   collapsed: boolean;
@@ -65,9 +75,25 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       >
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center logo-glow shrink-0"
-          style={{ background: "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))" }}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "rgba(0,212,255,0.12)",
+            border: "1px solid rgba(0, 0, 0, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow:
+              "0 0 30px rgba(0, 0, 0, 0.35), 0 0 50px rgba(30, 22, 26, 0.2)",
+          }}
         >
-          <Zap size={18} className="text-white" />
+          <Image
+            src={RaptureLogo}
+            alt="Rapture Logo"
+            width={32}
+            height={32}
+          />
         </div>
 
         {!collapsed && (
@@ -76,18 +102,16 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className="gradient-text font-bold text-sm tracking-widest truncate"
               style={{ fontFamily: "var(--font-serif)" }}
             >
-              NEXORA
+              Rapture
             </p>
             <p
               className="text-xs tracking-widest uppercase truncate"
               style={{ color: "var(--text-muted)", fontSize: "8px" }}
             >
-              Admin Console
+              Cafe & Bar
             </p>
           </div>
         )}
-
-      
       </div>
 
       {/* Nav */}
@@ -105,35 +129,51 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <ul className="m-5 space-y-0.5">
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
                 return (
                   <li key={item.href} className="relative group">
                     <a
                       href={item.href}
-                      onClick={(e) => { e.preventDefault(); router.push(item.href); }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push(item.href);
+                      }}
                       className={`flex items-center gap-2.5 px-5 py-2 mx-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                         collapsed ? "justify-center" : ""
                       } ${isActive ? "nav-item-active" : ""}`}
                       style={{
-                        color: isActive ? "var(--neon-blue)" : "var(--text-soft)",
+                        color: isActive
+                          ? "var(--neon-blue)"
+                          : "var(--text-soft)",
                         textDecoration: "none",
                       }}
                       onMouseEnter={(e) => {
                         if (!isActive) {
-                          (e.currentTarget as HTMLAnchorElement).style.background = "rgba(0,212,255,0.06)";
-                          (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.9)";
+                          (
+                            e.currentTarget as HTMLAnchorElement
+                          ).style.background = "rgba(0,212,255,0.06)";
+                          (e.currentTarget as HTMLAnchorElement).style.color =
+                            "rgba(255,255,255,0.9)";
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!isActive) {
-                          (e.currentTarget as HTMLAnchorElement).style.background = "";
-                          (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-soft)";
+                          (
+                            e.currentTarget as HTMLAnchorElement
+                          ).style.background = "";
+                          (e.currentTarget as HTMLAnchorElement).style.color =
+                            "var(--text-soft)";
                         }
                       }}
                     >
                       <Icon
                         size={15}
-                        style={{ color: isActive ? "var(--neon-blue)" : undefined, flexShrink: 0 }}
+                        style={{
+                          color: isActive ? "var(--neon-blue)" : undefined,
+                          flexShrink: 0,
+                        }}
                       />
                       {!collapsed && (
                         <>
@@ -160,7 +200,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         }}
                       >
                         {item.label}
-                        {"count" in item && item.count ? ` (${item.count})` : ""}
+                        {"count" in item && item.count
+                          ? ` (${item.count})`
+                          : ""}
                       </span>
                     )}
                   </li>
@@ -181,19 +223,37 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             collapsed ? "justify-center" : ""
           }`}
           style={{ color: "var(--text-soft)" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = "rgba(0,212,255,0.06)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "")}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLDivElement).style.background =
+              "rgba(0,212,255,0.06)")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLDivElement).style.background = "")
+          }
         >
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-            style={{ background: "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))" }}
+            style={{
+              background:
+                "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
+            }}
           >
             MR
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" style={{ color: "var(--text-bright)" }}>Mika Reyes</p>
-              <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>Admin</p>
+              <p
+                className="text-xs font-semibold truncate"
+                style={{ color: "var(--text-bright)" }}
+              >
+                Mika Reyes
+              </p>
+              <p
+                className="text-xs truncate"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Admin
+              </p>
             </div>
           )}
         </div>

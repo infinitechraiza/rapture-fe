@@ -1,5 +1,7 @@
-"use client"; 
-import { useState } from 'react';
+"use client";
+
+
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, Users, Tag, AlertTriangle, CheckCircle2, Loader } from 'lucide-react';

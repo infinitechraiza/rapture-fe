@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Head from "next/head";
 
+import { Toaster } from "@/components/ui/toaster";
+
 export const metadata: Metadata = {
   title: "Rapture Cafe & Bar",
   description:
@@ -15,8 +17,16 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
-      { url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
+      {
+        url: "/android-chrome-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/android-chrome-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
     ],
     apple: [{ url: "/rapture_logo.png", sizes: "192x192", type: "image/png" }],
   },
@@ -52,7 +62,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <link rel="apple-touch-icon" href="/rapture_logo.png" />
       </Head>
       <body>
-        <RootLayout>{children}</RootLayout>
+        <RootLayout>
+          {children}
+          <Toaster />
+        </RootLayout>
       </body>
     </html>
   );
