@@ -9,11 +9,15 @@ import {
   CalendarCheck,
   Calendar,
   Settings,
-  Zap,
+  Frame,
+  LogOut,
 } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 
 import RaptureLogo from "../../app/rapture_logo.png";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "@/hooks/use-toast";
 
 const navSections = [
   {
@@ -34,6 +38,7 @@ const navSections = [
       { label: "Users", href: "/admin/users", icon: Users },
       { label: "Comedians", href: "/admin/comedians", icon: Users },
       { label: "About", href: "/admin/about", icon: Info },
+      { label: "Gallery", href: "/admin/gallery", icon: Frame },
       { label: "Events", href: "/admin/events", icon: Calendar },
       {
         label: "Reservation",
@@ -54,9 +59,50 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+function getInitials(name?: string | null): string {
+  if (!name || !name.trim()) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const displayName = user?.name || "Admin";
+  // Falls back to a generic label if the user object doesn't carry a role field.
+  const displayRole = (user as { role?: string } | null)?.role || "Admin";
+  const initials = getInitials(user?.name);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      toast({
+        variant: "success",
+        title: "Logged Out",
+        description: "You have been successfully logged out",
+      });
+      router.push("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to logout. Please try again.",
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <aside
@@ -64,7 +110,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? "w-16" : "w-56"
       }`}
       style={{
-        background: "var(--card-dark)",
+        background: "var(--sidebar-header-bg)",
         borderRight: "1px solid rgba(0,212,255,0.12)",
       }}
     >
@@ -88,12 +134,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               "0 0 30px rgba(0, 0, 0, 0.35), 0 0 50px rgba(30, 22, 26, 0.2)",
           }}
         >
-          <Image
-            src={RaptureLogo}
-            alt="Rapture Logo"
-            width={32}
-            height={32}
-          />
+          <Image src={RaptureLogo} alt="Rapture Logo" width={32} height={32} />
         </div>
 
         {!collapsed && (
@@ -215,7 +256,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* User Footer */}
       <div
-        className="px-3 py-3 shrink-0"
+        className="px-3 py-3 shrink-0 space-y-1"
         style={{ borderTop: "1px solid rgba(0,212,255,0.1)" }}
       >
         <div
@@ -223,6 +264,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             collapsed ? "justify-center" : ""
           }`}
           style={{ color: "var(--text-soft)" }}
+          onClick={() => router.push("/profile")}
           onMouseEnter={(e) =>
             ((e.currentTarget as HTMLDivElement).style.background =
               "rgba(0,212,255,0.06)")
@@ -238,7 +280,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
             }}
           >
-            MR
+            {loading ? (
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            ) : (
+              initials
+            )}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
@@ -246,17 +292,43 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 className="text-xs font-semibold truncate"
                 style={{ color: "var(--text-bright)" }}
               >
-                Mika Reyes
+                {loading ? "Loading…" : displayName}
               </p>
               <p
                 className="text-xs truncate"
                 style={{ color: "var(--text-muted)" }}
               >
-                Admin
+                {displayRole}
               </p>
             </div>
           )}
         </div>
+
+        <button
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className={`flex items-center gap-2.5 px-2 py-2 w-full rounded-lg text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed ${
+            collapsed ? "justify-center" : ""
+          }`}
+          style={{
+            color: "rgba(255,45,155,0.75)",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+          }}
+          onMouseEnter={(e) => {
+            if (isLoggingOut) return;
+            e.currentTarget.style.background = "rgba(255,45,155,0.1)";
+            e.currentTarget.style.color = "var(--neon-pink)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "rgba(255,45,155,0.75)";
+          }}
+        >
+          <LogOut size={14} className="shrink-0" />
+          {!collapsed && (isLoggingOut ? "Signing out…" : "Sign out")}
+        </button>
       </div>
     </aside>
   );

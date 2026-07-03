@@ -13,6 +13,7 @@ import {
   Loader2,
   GripVertical,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 // Map icon name (stored in DB) -> lucide component (rendered in UI)
 const ICON_MAP: Record<string, any> = {
@@ -52,6 +53,22 @@ const EMPTY_SECTION: AboutSectionData = {
   stat_label: "",
   values: [],
 };
+
+// Try to pull a meaningful error message out of a failed fetch Response.
+// Falls back to a generic message if the backend didn't send JSON / a message field.
+async function getErrorMessage(res: Response, fallback: string) {
+  try {
+    const json = await res.clone().json();
+    return json?.error || json?.message || fallback;
+  } catch {
+    try {
+      const text = await res.text();
+      return text || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+}
 
 function Field({
   label,
@@ -95,7 +112,10 @@ export default function AboutPage() {
     setError(null);
     try {
       const res = await fetch("/api/about");
-      if (!res.ok) throw new Error("Failed to load About content");
+      if (!res.ok) {
+        const message = await getErrorMessage(res, "Failed to load About content");
+        throw new Error(message);
+      }
       const json = await res.json();
       const section = json.data;
 
@@ -110,7 +130,13 @@ export default function AboutPage() {
         values: section.values ?? [],
       });
     } catch (e: any) {
-      setError(e.message ?? "Something went wrong");
+      const message = e.message ?? "Something went wrong";
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Couldn't load About content",
+        description: message,
+      });
     } finally {
       setLoading(false);
     }
@@ -118,7 +144,7 @@ export default function AboutPage() {
 
   function updateField<K extends keyof AboutSectionData>(
     key: K,
-    value: AboutSectionData[K]
+    value: AboutSectionData[K],
   ) {
     setData((prev) => ({ ...prev, [key]: value }));
   }
@@ -158,10 +184,24 @@ export default function AboutPage() {
     // If it already exists in the DB, delete it there too
     if (card.id) {
       try {
-        await fetch(`/api/about/values/${card.id}`, { method: "DELETE" });
-      } catch {
+        const res = await fetch(`/api/about/values/${card.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const message = await getErrorMessage(
+            res,
+            `Failed to delete "${card.title}"`,
+          );
+          throw new Error(message);
+        }
+      } catch (e: any) {
         // non-fatal — local state is already updated; a full save will
         // reconcile on next load if this silently failed
+        toast({
+          variant: "destructive",
+          title: "Couldn't delete card",
+          description: e.message ?? `Failed to delete "${card.title}"`,
+        });
       }
     }
   }
@@ -181,19 +221,43 @@ export default function AboutPage() {
       let sectionId = data.id;
 
       if (sectionId) {
-        const res = await fetch(`/api/about/${sectionId}`, {
+        // Row is expected to exist — try PUT first.
+        let res = await fetch(`/api/about/${sectionId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(sectionPayload),
         });
-        if (!res.ok) throw new Error("Failed to save section");
+
+        if (res.status === 404) {
+          // Table/row is actually empty (e.g. stale local id, or it was
+          // deleted) — fall back to creating it fresh.
+          res = await fetch(`/api/about`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sectionPayload),
+          });
+          if (!res.ok) {
+            const message = await getErrorMessage(res, "Failed to create section");
+            throw new Error(message);
+          }
+          const json = await res.json();
+          sectionId = json.data.id;
+          updateField("id", sectionId);
+        } else if (!res.ok) {
+          const message = await getErrorMessage(res, "Failed to save section");
+          throw new Error(message);
+        }
       } else {
+        // No local id at all — this is a brand-new section.
         const res = await fetch(`/api/about`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(sectionPayload),
         });
-        if (!res.ok) throw new Error("Failed to create section");
+        if (!res.ok) {
+          const message = await getErrorMessage(res, "Failed to create section");
+          throw new Error(message);
+        }
         const json = await res.json();
         sectionId = json.data.id;
         updateField("id", sectionId);
@@ -212,23 +276,53 @@ export default function AboutPage() {
         };
 
         if (card.id) {
-          const res = await fetch(`/api/about/values/${card.id}`, {
+          // Row is expected to exist — try PUT first.
+          let res = await fetch(`/api/about/values/${card.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
-          
-          if (!res.ok) throw new Error(`Failed to save "${card.title}"`);
-          const json = await res.json();
-          savedValues.push(json.data);
+
+          if (res.status === 404) {
+            // Row doesn't actually exist anymore — create it instead.
+            res = await fetch(`/api/about/values`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+              const message = await getErrorMessage(
+                res,
+                `Failed to create "${card.title}"`,
+              );
+              throw new Error(message);
+            }
+            const json = await res.json();
+            savedValues.push(json.data);
+          } else if (!res.ok) {
+            const message = await getErrorMessage(
+              res,
+              `Failed to save "${card.title}"`,
+            );
+            throw new Error(message);
+          } else {
+            const json = await res.json();
+            savedValues.push(json.data);
+          }
         } else {
+          // No local id — brand-new card.
           const res = await fetch(`/api/about/values`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
-
-          if (!res.ok) throw new Error(`Failed to create "${card.title}"`);
+          if (!res.ok) {
+            const message = await getErrorMessage(
+              res,
+              `Failed to create "${card.title}"`,
+            );
+            throw new Error(message);
+          }
           const json = await res.json();
           savedValues.push(json.data);
         }
@@ -236,8 +330,18 @@ export default function AboutPage() {
 
       setData((prev) => ({ ...prev, values: savedValues }));
       setSavedAt(new Date());
+      toast({
+        title: "Saved",
+        description: "About content updated successfully.",
+      });
     } catch (e: any) {
-      setError(e.message ?? "Failed to save changes");
+      const message = e.message ?? "Failed to save changes";
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Couldn't save changes",
+        description: message,
+      });
     } finally {
       setSaving(false);
     }
@@ -259,7 +363,10 @@ export default function AboutPage() {
     <div className="space-y-6 flex-1 overflow-y-auto p-6 min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--text-bright)" }}>
+          <h1
+            className="text-xl font-bold"
+            style={{ color: "var(--text-bright)" }}
+          >
             About
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
@@ -277,7 +384,8 @@ export default function AboutPage() {
             disabled={saving}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-60"
             style={{
-              background: "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
+              background:
+                "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
               color: "#fff",
             }}
           >
@@ -309,11 +417,17 @@ export default function AboutPage() {
         <div className="flex items-center gap-3 mb-1">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))" }}
+            style={{
+              background:
+                "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
+            }}
           >
             <Sparkles size={17} className="text-white" />
           </div>
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text-bright)" }}>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-bright)" }}
+          >
             Our Story
           </h3>
         </div>
@@ -341,7 +455,9 @@ export default function AboutPage() {
           <Field label="Description (paragraph 1)">
             <textarea
               value={data.description_primary}
-              onChange={(e) => updateField("description_primary", e.target.value)}
+              onChange={(e) =>
+                updateField("description_primary", e.target.value)
+              }
               rows={3}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
               style={inputStyle}
@@ -350,20 +466,24 @@ export default function AboutPage() {
           <Field label="Description (paragraph 2)">
             <textarea
               value={data.description_secondary}
-              onChange={(e) => updateField("description_secondary", e.target.value)}
+              onChange={(e) =>
+                updateField("description_secondary", e.target.value)
+              }
               rows={3}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
               style={inputStyle}
             />
           </Field>
         </div>
-
       </div>
 
       {/* Value cards */}
       <div className="card-neon p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text-bright)" }}>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-bright)" }}
+          >
             Value Cards{" "}
             <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
               ({data.values.length}/4)
@@ -394,7 +514,10 @@ export default function AboutPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <GripVertical size={14} style={{ color: "var(--text-muted)" }} />
+                    <GripVertical
+                      size={14}
+                      style={{ color: "var(--text-muted)" }}
+                    />
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center"
                       style={{
@@ -406,7 +529,9 @@ export default function AboutPage() {
                     </div>
                     <select
                       value={card.icon}
-                      onChange={(e) => updateValueCard(i, { icon: e.target.value })}
+                      onChange={(e) =>
+                        updateValueCard(i, { icon: e.target.value })
+                      }
                       className="px-2 py-1 rounded-md text-xs outline-none"
                       style={inputStyle}
                     >
@@ -422,10 +547,12 @@ export default function AboutPage() {
                     className="w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200"
                     style={{ color: "var(--text-muted)" }}
                     onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = "#ff6b8a")
+                      ((e.currentTarget as HTMLButtonElement).style.color =
+                        "#ff6b8a")
                     }
                     onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)")
+                      ((e.currentTarget as HTMLButtonElement).style.color =
+                        "var(--text-muted)")
                     }
                   >
                     <Trash2 size={14} />
@@ -434,14 +561,18 @@ export default function AboutPage() {
 
                 <input
                   value={card.title}
-                  onChange={(e) => updateValueCard(i, { title: e.target.value })}
+                  onChange={(e) =>
+                    updateValueCard(i, { title: e.target.value })
+                  }
                   placeholder="Category title"
                   className="w-full px-3 py-2 rounded-lg text-sm font-medium outline-none"
                   style={inputStyle}
                 />
                 <textarea
                   value={card.description}
-                  onChange={(e) => updateValueCard(i, { description: e.target.value })}
+                  onChange={(e) =>
+                    updateValueCard(i, { description: e.target.value })
+                  }
                   placeholder="Short description"
                   rows={2}
                   className="w-full px-3 py-2 rounded-lg text-xs outline-none resize-none"

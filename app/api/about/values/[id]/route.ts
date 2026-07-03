@@ -56,7 +56,10 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(data, { status: response.status ,   headers: cookie.headers });
+    return NextResponse.json(data, {
+      status: response.status,
+      headers: cookie.headers,
+    });
   } catch (error) {
     console.error("GET /api/about/values/[id] error:", error);
     return NextResponse.json(

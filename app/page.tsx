@@ -20,10 +20,10 @@ export default function HomePage() {
         <AboutPage />
         <NeonDivider />
 
-        <ComedianSection />
-        <NeonDivider />
-
         <Show />
+        <NeonDivider />
+        
+        <ComedianSection />
         <NeonDivider />
 
         <Gallery />

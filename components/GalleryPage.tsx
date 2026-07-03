@@ -181,7 +181,7 @@ export default function Gallery() {
           <p style={{ fontSize: 11, letterSpacing: '0.4em', textTransform: 'uppercase', color: '#b94fff', fontWeight: 700, marginBottom: 16 }}>Be Part of the Story</p>
           <h2 style={{ fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, lineHeight: 1.15, margin: '0 0 24px' }}>Ready to make your own memories?</h2>
           <Link
-            href="/contact"
+            href="/booking"
             style={{ display: 'inline-block', background: 'linear-gradient(135deg, #ff2d9b, #b94fff)', color: '#fff', borderRadius: 50, padding: '14px 36px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', textDecoration: 'none', boxShadow: '0 0 30px rgba(255,45,155,0.4)', transition: 'all 0.2s' }}
           >
             Experience It Live. Book A Table →

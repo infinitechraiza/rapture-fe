@@ -10,17 +10,17 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const formData = await request.formData();
     const token = (await cookies()).get("auth_token")?.value;
 
+    formData.append("_method", "PUT"); // Append _method to indicate a PUT request
     const response = await fetch(`${getApiUrl()}/api/comedians/${id}`, {
-      method: "PUT",
+      method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
         Accept: "application/json",
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(body),
+      body: formData,
     });
 
     const data = await response.json();

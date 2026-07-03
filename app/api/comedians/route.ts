@@ -33,17 +33,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const formData = await request.formData();
     const token = (await cookies()).get("auth_token")?.value;
 
     const response = await fetch(`${getApiUrl()}/api/comedians`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
         Accept: "application/json",
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(body),
+      body: formData,
     });
 
     const data = await response.json();

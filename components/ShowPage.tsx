@@ -103,7 +103,7 @@ export default function Shows() {
             className="flex flex-col sm:flex-row items-center gap-4"
           >
             <Link
-              href="/contact"
+              href="/booking"
               className="bg-gradient-to-r from-[var(--neon-pink)] to-[var(--neon-purple)] text-white px-8 py-4 rounded-full text-sm font-bold uppercase tracking-widest shadow-[0_0_25px_rgba(255,45,155,0.3)] hover:shadow-[0_0_35px_rgba(255,45,155,0.6)] transition-all hover:-translate-y-1"
             >
               Book a Table

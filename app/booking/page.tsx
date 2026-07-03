@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Calendar,
@@ -18,6 +19,9 @@ import {
   Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 const TIME_SLOTS = [
   "9:00 AM",
@@ -80,6 +84,7 @@ type DayEvent = {
 const DEFAULT_EVENT_COLOR = "#00d4ff";
 const BUSY_THRESHOLD = 3;
 const FULL_THRESHOLD = 5;
+
 
 function getDayAvailability(
   date: Date,
@@ -278,7 +283,6 @@ function DayEventsModal({
 }) {
   const [viewingDate, setViewingDate] = useState<Date | null>(date);
   const [currentPage, setCurrentPage] = useState(0);
-
   useEffect(() => {
     if (open && date) {
       setViewingDate(date);
@@ -717,542 +721,6 @@ function DayEventsModal({
   );
 }
 
-const Step3Component = ({
-  name,
-  email,
-  phone,
-  error,
-  handleNameChange,
-  handleEmailChange,
-  handlePhoneChange,
-}: any) => (
-  <div className="space-y-4">
-    {[
-      {
-        key: "name",
-        label: "Full Name",
-        type: "text",
-        icon: User,
-        ph: "Your full name",
-        val: name,
-        set: handleNameChange,
-      },
-      {
-        key: "email",
-        label: "Email Address",
-        type: "email",
-        icon: Mail,
-        ph: "you@example.com",
-        val: email,
-        set: handleEmailChange,
-      },
-      {
-        key: "phone",
-        label: "Phone Number",
-        type: "tel",
-        icon: Phone,
-        ph: "+63 9XX XXX XXXX",
-        val: phone,
-        set: handlePhoneChange,
-      },
-    ].map(({ key, label, type, icon: Icon, ph, val, set }) => (
-      <div key={key}>
-        <label
-          className="form-label flex items-center gap-1 mb-2"
-          style={{
-            color: "var(--neon-pink)",
-            fontSize: "12px",
-            fontWeight: 600,
-          }}
-        >
-          <Icon size={11} /> {label}
-        </label>
-        <input
-          value={val}
-          onChange={set}
-          type={type}
-          className="w-full px-4 py-3 rounded-lg"
-          style={{
-            background: "rgba(0, 0, 0, 0.3)",
-            border: "1px solid var(--border-blue)",
-            color: "var(--text-bright)",
-            fontSize: "14px",
-            outline: "none",
-            transition: "all 0.2s ease",
-            boxSizing: "border-box",
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = "var(--neon-blue)";
-            e.currentTarget.style.boxShadow = "0 0 10px rgba(0,212,255,0.2)";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = "var(--border-blue)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-          placeholder={ph}
-          autoComplete="off"
-        />
-      </div>
-    ))}
-    {error && (
-      <p
-        style={{
-          fontSize: 12,
-          color: "#ef4444",
-          background: "rgba(239,68,68,0.08)",
-          border: "1px solid rgba(239,68,68,0.2)",
-          borderRadius: 10,
-          padding: "10px 14px",
-        }}
-      >
-        {error}
-      </p>
-    )}
-  </div>
-);
-
-const ConfirmationScreen = ({
-  selectedDate,
-  selectedTime,
-  name,
-  email,
-  phone,
-  selectedEvents,
-  onBookAgain,
-}: {
-  selectedDate: Date | null;
-  selectedTime: string;
-  name: string;
-  email: string;
-  phone: string;
-  selectedEvents: DayEvent[];
-  onBookAgain?: () => void;
-}) => (
-  <div
-    className="flex items-center justify-center px-6 py-20 min-h-screen"
-    style={{
-      background:
-        "linear-gradient(180deg, transparent 2%, var(--purple-glow) 40%, transparent 100%)",
-      backdropFilter: "blur(10px)",
-    }}
-  >
-    <div className="hero-neon-orbs" aria-hidden style={{ opacity: 0.25 }}>
-      <div className="hero-orb hob1" />
-      <div className="hero-orb hop1" />
-      <div className="hero-orb hob2" />
-      <div className="hero-orb hop2" />
-    </div>
-    <div className="hero-scanlines" aria-hidden style={{ opacity: 0.08 }} />
-    <motion.div
-      initial={{ scale: 0.92, opacity: 0, y: 24 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
-      className="relative z-10 w-full max-w-md"
-    >
-      <div
-        className="card-neon"
-        style={{ borderRadius: 24, padding: 0, overflow: "hidden" }}
-      >
-        <div
-          style={{
-            height: 4,
-            background:
-              "linear-gradient(90deg, var(--neon-blue), var(--neon-pink), var(--neon-blue))",
-          }}
-        />
-        <div style={{ padding: "40px 36px 36px" }}>
-          <div className="flex justify-center mb-6">
-            <motion.div
-              initial={{ scale: 0, rotate: -20 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="w-20 h-20 rounded-full flex items-center justify-center logo-glow"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
-                boxShadow:
-                  "0 0 40px rgba(0,212,255,0.35), 0 0 80px rgba(255,45,155,0.2)",
-              }}
-            >
-              <CheckCircle size={36} color="#fff" strokeWidth={2.5} />
-            </motion.div>
-          </div>
-
-          <div className="text-center mb-6">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div
-                className="hero-eyebrow inline-flex mx-auto mb-3"
-                style={{ fontSize: 10 }}
-              >
-                <span
-                  className="now-live-dot"
-                  style={{ background: "#22c55e" }}
-                />
-                Booking Confirmed
-              </div>
-              <h2
-                className="section-title"
-                style={{ fontSize: 30, marginBottom: 6 }}
-              >
-                You're all set! 🎉
-              </h2>
-              <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Your appointment has been received and is pending confirmation.
-              </p>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: 16,
-              marginBottom: 24,
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                padding: "10px 16px",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.15em",
-                textTransform: "uppercase" as const,
-                color: "var(--text-muted)",
-              }}
-            >
-              Appointment Details
-            </div>
-            {[
-              { icon: User, label: "Name", value: name },
-              { icon: Mail, label: "Email", value: email },
-              { icon: Phone, label: "Phone", value: phone },
-            ].map(({ icon: Icon, label, value }, idx, arr) => (
-              <div
-                key={label}
-                className="flex items-center gap-3 px-4 py-3"
-                style={{
-                  borderBottom:
-                    idx < arr.length - 1
-                      ? "1px solid rgba(255,255,255,0.04)"
-                      : "none",
-                }}
-              >
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Icon size={12} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase" as const,
-                      color: "var(--text-muted)",
-                      margin: 0,
-                    }}
-                  >
-                    {label}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      margin: 0,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap" as const,
-                    }}
-                  >
-                    {value}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </motion.div>
-
-          {selectedEvents.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45 }}
-              style={{
-                background: "rgba(0,212,255,0.05)",
-                border: "1px solid rgba(0,212,255,0.15)",
-                borderRadius: 16,
-                padding: 14,
-                marginBottom: 20,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--neon-blue)",
-                  marginBottom: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                🎭 Selected Events ({selectedEvents.length})
-              </div>
-
-              {Array.from(
-                selectedEvents.reduce((acc, ev) => {
-                  const dateKey = ev.event_date.split("T")[0];
-                  if (!acc.has(dateKey)) acc.set(dateKey, []);
-                  acc.get(dateKey)!.push(ev);
-                  return acc;
-                }, new Map<string, DayEvent[]>()),
-              )
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([dateKey, eventsForDay]) => (
-                  <div key={dateKey} style={{ marginBottom: 12 }}>
-                    <p
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "var(--neon-blue)",
-                        marginBottom: 6,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 5,
-                        margin: 0,
-                      }}
-                    >
-                      <Calendar size={10} /> {formatEventDateDisplay(dateKey)}
-                    </p>
-
-                    {eventsForDay
-                      .slice()
-                      .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                      .map((event) => (
-                        <div
-                          key={event.id}
-                          style={{
-                            borderRadius: 12,
-                            background: "rgba(0,212,255,0.08)",
-                            border: "1px solid rgba(0,212,255,0.2)",
-                            padding: 12,
-                            marginBottom: 8,
-                          }}
-                        >
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: "var(--text-bright)",
-                              marginBottom: 4,
-                            }}
-                          >
-                            {event.title}
-                          </p>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: 11,
-                              color: "var(--text-soft)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 5,
-                            }}
-                          >
-                            <Clock size={11} />{" "}
-                            {formatTimeDisplay(event.start_time)} –{" "}
-                            {formatTimeDisplay(event.end_time)}
-                          </p>
-                          {event.comedians && event.comedians.length > 0 && (
-                            <div
-                              style={{
-                                marginTop: 10,
-                                paddingTop: 10,
-                                borderTop: "1px solid rgba(0,212,255,0.1)",
-                              }}
-                            >
-                              <p
-                                style={{
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  letterSpacing: "0.1em",
-                                  textTransform: "uppercase",
-                                  color: "var(--text-muted)",
-                                  margin: "0 0 8px 0",
-                                }}
-                              >
-                                Performers
-                              </p>
-                              <div
-                                style={{
-                                  display: "grid",
-                                  gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(60px, 1fr))",
-                                  gap: 8,
-                                }}
-                              >
-                                {event.comedians.map((comedian) => (
-                                  <div
-                                    key={comedian.id}
-                                    style={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      alignItems: "center",
-                                      gap: 6,
-                                    }}
-                                  >
-                                    {comedian.image ? (
-                                      <img
-                                        src={comedian.image}
-                                        alt={comedian.name}
-                                        style={{
-                                          width: 50,
-                                          height: 50,
-                                          borderRadius: 8,
-                                          objectFit: "cover",
-                                          border:
-                                            "1px solid rgba(0,212,255,0.3)",
-                                        }}
-                                      />
-                                    ) : (
-                                      <div
-                                        style={{
-                                          width: 50,
-                                          height: 50,
-                                          borderRadius: 8,
-                                          background: "rgba(0,212,255,0.1)",
-                                          border:
-                                            "1px solid rgba(0,212,255,0.3)",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                        }}
-                                      >
-                                        <Users
-                                          size={20}
-                                          color="var(--neon-blue)"
-                                        />
-                                      </div>
-                                    )}
-                                    <span
-                                      style={{
-                                        fontSize: 9,
-                                        fontWeight: 600,
-                                        color: "var(--text-soft)",
-                                        textAlign: "center",
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        whiteSpace: "nowrap",
-                                        maxWidth: "100%",
-                                      }}
-                                    >
-                                      {comedian.name}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                ))}
-            </motion.div>
-          )}
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            style={{
-              background: "rgba(34,197,94,0.06)",
-              border: "1px solid rgba(34,197,94,0.2)",
-              borderRadius: 12,
-              padding: "12px 16px",
-              marginBottom: 24,
-              fontSize: 12,
-              color: "rgba(255,255,255,0.45)",
-              lineHeight: 1.6,
-            }}
-          >
-            <span style={{ color: "#22c55e", fontWeight: 700 }}>
-              📧 Confirmation sent
-            </span>{" "}
-            to <span style={{ color: "var(--text-soft)" }}>{email}</span>. We'll
-            contact you shortly to confirm your slot.
-          </motion.div>
-
-          {/* Book Again Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55 }}
-          >
-            <button
-              onClick={onBookAgain}
-              style={{
-                width: "100%",
-                padding: "12px 24px",
-                borderRadius: 12,
-                background:
-                  "linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,255,0.05))",
-                border: "1px solid rgba(0,212,255,0.3)",
-                color: "#00d4ff",
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: "0.5px",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background =
-                  "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.08))";
-                e.currentTarget.style.boxShadow =
-                  "0 0 16px rgba(0,212,255,0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background =
-                  "linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,255,0.05))";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              <Sparkles size={16} />
-              Book Again
-            </button>
-          </motion.div>
-        </div>
-      </div>
-      <p
-        className="text-center mt-4"
-        style={{
-          fontSize: 11,
-          color: "var(--text-muted)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 6,
-        }}
-      >
-        <MapPin size={10} /> Rapture Cafe Bar · Mon–Sat 9AM–7PM
-      </p>
-    </motion.div>
-  </div>
-);
-
 export default function Book() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState("");
@@ -1277,7 +745,9 @@ export default function Book() {
   const [selectedEventIds, setSelectedEventIds] = useState<number[]>([]);
 
   const calendarCells = buildCalendarGrid(viewYear, viewMonth);
-
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user } = useAuth();
   const loadMonthEvents = useCallback(async () => {
     setEventsLoading(true);
     setEventsError(null);
@@ -1366,7 +836,558 @@ export default function Book() {
     [],
   );
 
+  const Step3Component = ({
+    name,
+    email,
+    phone,
+    error,
+    handleNameChange,
+    handleEmailChange,
+    handlePhoneChange,
+  }: any) => (
+    <div className="space-y-4">
+      {[
+        {
+          key: "name",
+          label: "Full Name",
+          type: "text",
+          icon: User,
+          ph: "Your full name",
+          val: name,
+          set: handleNameChange,
+        },
+        {
+          key: "email",
+          label: "Email Address",
+          type: "email",
+          icon: Mail,
+          ph: "you@example.com",
+          val: email,
+          set: handleEmailChange,
+        },
+        {
+          key: "phone",
+          label: "Phone Number",
+          type: "tel",
+          icon: Phone,
+          ph: "+63 9XX XXX XXXX",
+          val: phone,
+          set: handlePhoneChange,
+        },
+      ].map(({ key, label, type, icon: Icon, ph, val, set }) => (
+        <div key={key}>
+          <label
+            className="form-label flex items-center gap-1 mb-2"
+            style={{
+              color: "var(--neon-pink)",
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
+            <Icon size={11} /> {label}
+          </label>
+          <input
+            value={
+              !user ? val : String(user?.[key as keyof typeof user] ?? "")
+            }
+            onChange={set}
+            type={type}
+            className="w-full px-4 py-3 rounded-lg"
+            style={{
+              background: "rgba(0, 0, 0, 0.3)",
+              border: "1px solid var(--border-blue)",
+              color: "var(--text-bright)",
+              fontSize: "14px",
+              outline: "none",
+              transition: "all 0.2s ease",
+              boxSizing: "border-box",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "var(--neon-blue)";
+              e.currentTarget.style.boxShadow = "0 0 10px rgba(0,212,255,0.2)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "var(--border-blue)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+            placeholder={ph}
+            autoComplete="off"
+          />
+        </div>
+      ))}
+      {error && (
+        <p
+          style={{
+            fontSize: 12,
+            color: "#ef4444",
+            background: "rgba(239,68,68,0.08)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: 10,
+            padding: "10px 14px",
+          }}
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  );
+
+  const ConfirmationScreen = ({
+    selectedDate,
+    selectedTime,
+    name,
+    email,
+    phone,
+    selectedEvents,
+    onBookAgain,
+  }: {
+    selectedDate: Date | null;
+    selectedTime: string;
+    name: string;
+    email: string;
+    phone: string;
+    selectedEvents: DayEvent[];
+    onBookAgain?: () => void;
+  }) => (
+    <div
+      className="flex items-center justify-center px-6 py-20 min-h-screen"
+      style={{
+        background:
+          "linear-gradient(180deg, transparent 2%, var(--purple-glow) 40%, transparent 100%)",
+        backdropFilter: "blur(10px)",
+      }}
+    >
+      <div className="hero-neon-orbs" aria-hidden style={{ opacity: 0.25 }}>
+        <div className="hero-orb hob1" />
+        <div className="hero-orb hop1" />
+        <div className="hero-orb hob2" />
+        <div className="hero-orb hop2" />
+      </div>
+      <div className="hero-scanlines" aria-hidden style={{ opacity: 0.08 }} />
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0, y: 24 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-md"
+      >
+        <div
+          className="card-neon"
+          style={{ borderRadius: 24, padding: 0, overflow: "hidden" }}
+        >
+          <div
+            style={{
+              height: 4,
+              background:
+                "linear-gradient(90deg, var(--neon-blue), var(--neon-pink), var(--neon-blue))",
+            }}
+          />
+          <div style={{ padding: "40px 36px 36px" }}>
+            <div className="flex justify-center mb-6">
+              <motion.div
+                initial={{ scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="w-20 h-20 rounded-full flex items-center justify-center logo-glow"
+                style={{
+                  background:
+                    "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
+                  boxShadow:
+                    "0 0 40px rgba(0,212,255,0.35), 0 0 80px rgba(255,45,155,0.2)",
+                }}
+              >
+                <CheckCircle size={36} color="#fff" strokeWidth={2.5} />
+              </motion.div>
+            </div>
+
+            <div className="text-center mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div
+                  className="hero-eyebrow inline-flex mx-auto mb-3"
+                  style={{ fontSize: 10 }}
+                >
+                  <span
+                    className="now-live-dot"
+                    style={{ background: "#22c55e" }}
+                  />
+                  Booking Confirmed
+                </div>
+                <h2
+                  className="section-title"
+                  style={{ fontSize: 30, marginBottom: 6 }}
+                >
+                  You're all set! 🎉
+                </h2>
+                <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                  Your appointment has been received and is pending
+                  confirmation.
+                </p>
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 16,
+                marginBottom: 24,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "10px 16px",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: "0.15em",
+                  textTransform: "uppercase" as const,
+                  color: "var(--text-muted)",
+                }}
+              >
+                Appointment Details
+              </div>
+              {[
+                { icon: User, label: "Name", value: name },
+                { icon: Mail, label: "Email", value: email },
+                { icon: Phone, label: "Phone", value: phone },
+              ].map(({ icon: Icon, label, value }, idx, arr) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-3 px-4 py-3"
+                  style={{
+                    borderBottom:
+                      idx < arr.length - 1
+                        ? "1px solid rgba(255,255,255,0.04)"
+                        : "none",
+                  }}
+                >
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon size={12} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--text-muted)",
+                        margin: 0,
+                      }}
+                    >
+                      {label}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        margin: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap" as const,
+                      }}
+                    >
+                      {value}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+
+            {selectedEvents.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+                style={{
+                  background: "rgba(0,212,255,0.05)",
+                  border: "1px solid rgba(0,212,255,0.15)",
+                  borderRadius: 16,
+                  padding: 14,
+                  marginBottom: 20,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--neon-blue)",
+                    marginBottom: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  🎭 Selected Events ({selectedEvents.length})
+                </div>
+
+                {Array.from(
+                  selectedEvents.reduce((acc, ev) => {
+                    const dateKey = ev.event_date.split("T")[0];
+                    if (!acc.has(dateKey)) acc.set(dateKey, []);
+                    acc.get(dateKey)!.push(ev);
+                    return acc;
+                  }, new Map<string, DayEvent[]>()),
+                )
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([dateKey, eventsForDay]) => (
+                    <div key={dateKey} style={{ marginBottom: 12 }}>
+                      <p
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "var(--neon-blue)",
+                          marginBottom: 6,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          margin: 0,
+                        }}
+                      >
+                        <Calendar size={10} /> {formatEventDateDisplay(dateKey)}
+                      </p>
+
+                      {eventsForDay
+                        .slice()
+                        .sort((a, b) =>
+                          a.start_time.localeCompare(b.start_time),
+                        )
+                        .map((event) => (
+                          <div
+                            key={event.id}
+                            style={{
+                              borderRadius: 12,
+                              background: "rgba(0,212,255,0.08)",
+                              border: "1px solid rgba(0,212,255,0.2)",
+                              padding: 12,
+                              marginBottom: 8,
+                            }}
+                          >
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "var(--text-bright)",
+                                marginBottom: 4,
+                              }}
+                            >
+                              {event.title}
+                            </p>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: 11,
+                                color: "var(--text-soft)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 5,
+                              }}
+                            >
+                              <Clock size={11} />{" "}
+                              {formatTimeDisplay(event.start_time)} –{" "}
+                              {formatTimeDisplay(event.end_time)}
+                            </p>
+                            {event.comedians && event.comedians.length > 0 && (
+                              <div
+                                style={{
+                                  marginTop: 10,
+                                  paddingTop: 10,
+                                  borderTop: "1px solid rgba(0,212,255,0.1)",
+                                }}
+                              >
+                                <p
+                                  style={{
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    letterSpacing: "0.1em",
+                                    textTransform: "uppercase",
+                                    color: "var(--text-muted)",
+                                    margin: "0 0 8px 0",
+                                  }}
+                                >
+                                  Performers
+                                </p>
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                      "repeat(auto-fit, minmax(60px, 1fr))",
+                                    gap: 8,
+                                  }}
+                                >
+                                  {event.comedians.map((comedian) => (
+                                    <div
+                                      key={comedian.id}
+                                      style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        gap: 6,
+                                      }}
+                                    >
+                                      {comedian.image ? (
+                                        <img
+                                          src={comedian.image}
+                                          alt={comedian.name}
+                                          style={{
+                                            width: 50,
+                                            height: 50,
+                                            borderRadius: 8,
+                                            objectFit: "cover",
+                                            border:
+                                              "1px solid rgba(0,212,255,0.3)",
+                                          }}
+                                        />
+                                      ) : (
+                                        <div
+                                          style={{
+                                            width: 50,
+                                            height: 50,
+                                            borderRadius: 8,
+                                            background: "rgba(0,212,255,0.1)",
+                                            border:
+                                              "1px solid rgba(0,212,255,0.3)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                          }}
+                                        >
+                                          <Users
+                                            size={20}
+                                            color="var(--neon-blue)"
+                                          />
+                                        </div>
+                                      )}
+                                      <span
+                                        style={{
+                                          fontSize: 9,
+                                          fontWeight: 600,
+                                          color: "var(--text-soft)",
+                                          textAlign: "center",
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                          maxWidth: "100%",
+                                        }}
+                                      >
+                                        {comedian.name}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  ))}
+              </motion.div>
+            )}
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              style={{
+                background: "rgba(34,197,94,0.06)",
+                border: "1px solid rgba(34,197,94,0.2)",
+                borderRadius: 12,
+                padding: "12px 16px",
+                marginBottom: 24,
+                fontSize: 12,
+                color: "rgba(255,255,255,0.45)",
+                lineHeight: 1.6,
+              }}
+            >
+              <span style={{ color: "#22c55e", fontWeight: 700 }}>
+                📧 Confirmation sent
+              </span>{" "}
+              to <span style={{ color: "var(--text-soft)" }}>{email}</span>.
+              We'll contact you shortly to confirm your slot.
+            </motion.div>
+
+            {/* Book Again Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+            >
+              <button
+                onClick={onBookAgain}
+                style={{
+                  width: "100%",
+                  padding: "12px 24px",
+                  borderRadius: 12,
+                  background:
+                    "linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,255,0.05))",
+                  border: "1px solid rgba(0,212,255,0.3)",
+                  color: "#00d4ff",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  letterSpacing: "0.5px",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.08))";
+                  e.currentTarget.style.boxShadow =
+                    "0 0 16px rgba(0,212,255,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,255,0.05))";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <Sparkles size={16} />
+                Book Again
+              </button>
+            </motion.div>
+          </div>
+        </div>
+        <p
+          className="text-center mt-4"
+          style={{
+            fontSize: 11,
+            color: "var(--text-muted)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          <MapPin size={10} /> Rapture Cafe Bar · Mon–Sat 9AM–7PM
+        </p>
+      </motion.div>
+    </div>
+  );
+
   async function handleSubmit() {
+    if (!user) {
+      router.push("/login");
+
+      const errorMsg = "Please login first to your account before booking.";
+      toast({
+        title: "Cannot book to this event!",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    }
     setLoading(true);
     setError("");
     try {
@@ -1432,8 +1453,9 @@ export default function Book() {
   const nameValid = name.trim().length >= 1;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const phoneValid = phone.replace(/\D/g, "").length >= 7;
-  const step2Valid = nameValid && emailValid && phoneValid;
+  const step2Valid = user || nameValid && emailValid && phoneValid;
   const step3Valid = true;
+
   const canProceed =
     step === 1
       ? step1Valid
@@ -1712,9 +1734,9 @@ export default function Book() {
             Personal Information
           </p>
           {[
-            { label: "Name", value: name },
-            { label: "Email", value: email },
-            { label: "Phone", value: phone },
+            { label: "Name", value: name || user?.name },
+            { label: "Email", value: email || user?.email },
+            { label: "Phone", value: phone || user?.phone },
           ].map(({ label, value }) => (
             <div
               key={label}
@@ -1989,8 +2011,7 @@ export default function Book() {
             className="flex items-center justify-center gap-1.5"
             style={{ color: "var(--text-muted)", fontSize: 13 }}
           >
-            <MapPin size={12} /> Rapture Cafe Bar &nbsp;·&nbsp; Mon–Sat
-            9AM–7PM
+            <MapPin size={12} /> Rapture Cafe Bar &nbsp;·&nbsp; Mon–Sat 9AM–7PM
           </p>
         </motion.div>
 
@@ -2189,7 +2210,7 @@ export default function Book() {
                 className="btn-primary flex items-center gap-2 text-xs sm:text-sm"
                 style={{
                   padding: "8px 20px",
-                  opacity: loading ? 0.6 : 1,
+                  opacity: loading ? 0.3 : 1,
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
               >

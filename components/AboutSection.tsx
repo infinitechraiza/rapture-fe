@@ -104,7 +104,7 @@ export function AboutPage() {
                   marginTop: 6,
                 }}
               >
-                TOMAS MORATO, QC
+                Cubao, Quezon City
               </div>
             </div>
           </div>

@@ -12,19 +12,18 @@ const ThemeContext = createContext<{
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
 
-  // On mount, read persisted preference
+  // On mount, read persisted preference — local state only.
+  // AdminShell applies data-theme to .admin-shell, NOT to <html>,
+  // so this never touches the document root and never leaks
+  // into the public site.
   useEffect(() => {
     const saved = localStorage.getItem("admin-theme") as Theme | null;
-    const initial = saved ?? "dark";
-    setTheme(initial);
-    document.documentElement.setAttribute("data-theme", initial);
+    if (saved) setTheme(saved);
   }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
-      // ✅ This is the critical line — must target <html>, not a div
-      document.documentElement.setAttribute("data-theme", next);
       localStorage.setItem("admin-theme", next);
       return next;
     });

@@ -64,36 +64,24 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/event
+// /api/event/route.ts
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
     const token = getAuthToken(request);
-
-    // You already have this log:
-    console.log(
-      "Token:",
-      token ? `present: ${token.substring(0, 20)}...` : "MISSING",
-    );
-    console.log("POST /api/event body:", JSON.stringify(body));
-    console.log("Token:", token ? "present" : "MISSING");
+    const formData = await request.formData(); // read as FormData, not JSON
 
     const response = await fetch(`${API_URL}/api/event`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: token ? `Bearer ${token}` : "",
+        // Do NOT set Content-Type — fetch will generate the correct
+        // multipart boundary itself. Setting it manually breaks the boundary.
       },
-      body: JSON.stringify(body),
+      body: formData,
     });
 
     const data = await response.json();
-    console.log(
-      "POST /api/event response:",
-      response.status,
-      JSON.stringify(data),
-    );
-
     return NextResponse.json(data, { status: response.status });
   } catch (err) {
     console.error("POST /api/event error:", err);

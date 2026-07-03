@@ -12,9 +12,9 @@ import {
   Users,
   Check,
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-
+import { Image as ImageIcon } from "lucide-react";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
   "January",
@@ -49,6 +49,7 @@ type CalendarEvent = {
   start_time: string;
   end_time: string;
   color: string;
+  image_url: string;
   description: string | null;
 };
 
@@ -472,7 +473,7 @@ function NewEventModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (form: EventForm) => Promise<boolean>;
+  onSubmit: (form: EventForm, image: File | null) => Promise<boolean>;
   submitting: boolean;
   serverError: string | null;
   defaultDate?: string;
@@ -485,6 +486,16 @@ function NewEventModal({
   const [comediansLoading, setComediansLoading] = useState(false);
   const [comediansError, setComediansError] = useState<string | null>(null);
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0] ?? null;
+    setImageFile(selected);
+    setImagePreview(selected ? URL.createObjectURL(selected) : null);
+  }
+
   useEffect(() => {
     if (open) {
       setForm((p) => ({
@@ -492,6 +503,9 @@ function NewEventModal({
         event_date: defaultDate ?? p.event_date,
       }));
       setErrors({});
+      setImageFile(null);
+      setImagePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [open, defaultDate]);
 
@@ -528,6 +542,7 @@ function NewEventModal({
     setForm((p) => ({ ...p, [key]: value }));
     if (errors[key]) setErrors((p) => ({ ...p, [key]: undefined }));
   };
+
   const toggleComedian = (id: number) => {
     setForm((p) => ({
       ...p,
@@ -538,6 +553,7 @@ function NewEventModal({
     if (errors.comedian_ids)
       setErrors((p) => ({ ...p, comedian_ids: undefined }));
   };
+
   const handleSelectAll = (selectAll: boolean) => {
     setForm((p) => ({
       ...p,
@@ -554,19 +570,21 @@ function NewEventModal({
     if (!form.event_date) e.event_date = "Event date is required.";
     if (!form.start_time) e.start_time = "Start time is required.";
     if (!form.end_time) e.end_time = "End time is required.";
-
-    if (form.comedian_ids.length === 0)
+    if (form.comedian_ids.length === 0) {
       e.comedian_ids = "Select at least one comedian.";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validate()) return;
-    const ok = await onSubmit(form);
+    const ok = await onSubmit(form, imageFile);
     if (ok) {
       setForm(EMPTY_FORM);
       setErrors({});
+      setImageFile(null);
+      setImagePreview(null);
     }
   };
   const handleClose = () => {
@@ -662,6 +680,74 @@ function NewEventModal({
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div>
+          <label style={labelStyle}>
+            Event Image{" "}
+            <span
+              style={{
+                marginLeft: 6,
+                color: "var(--text-muted)",
+                fontWeight: 400,
+                textTransform: "none",
+                letterSpacing: 0,
+              }}
+            >
+              — optional
+            </span>
+          </label>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: 76,
+                height: 76,
+                borderRadius: 12,
+                overflow: "hidden",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(0,0,0,0.3)",
+                border: "1px dashed rgba(0,212,255,0.3)",
+                flexShrink: 0,
+              }}
+            >
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <ImageIcon size={22} style={{ color: "var(--text-muted)" }} />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                padding: "9px 14px",
+                borderRadius: 9,
+                cursor: "pointer",
+                background: "rgba(0,212,255,0.08)",
+                border: "1px solid rgba(0,212,255,0.2)",
+                color: "var(--neon-blue)",
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              {imageFile ? imageFile.name : "Choose file"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ display: "none" }}
+            />
+          </div>
+        </div>
+
         <div>
           <label style={labelStyle}>
             Title <span style={{ color: "var(--neon-pink)" }}>*</span>
@@ -868,26 +954,37 @@ function DayDetailPanel({
       width={440}
       glowColor="rgba(168,85,247,0.15)"
     >
+      {/* Header */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "space-between",
-          marginBottom: 20,
+          gap: 12,
+          marginBottom: 22,
+          paddingTop: 4,
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h3
             style={{
               margin: 0,
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: 700,
               color: "var(--text-bright)",
+              lineHeight: 1.3,
+              wordBreak: "break-word",
             }}
           >
             {date}
           </h3>
-          <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+          <p
+            style={{
+              margin: "4px 0 0",
+              fontSize: 12,
+              color: "var(--text-muted)",
+            }}
+          >
             {events.length} event{events.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -904,11 +1001,14 @@ function DayDetailPanel({
             alignItems: "center",
             justifyContent: "center",
             color: "var(--text-muted)",
+            flexShrink: 0,
           }}
         >
           <X size={14} />
         </button>
       </div>
+
+      {/* Add event button */}
       <button
         onClick={onAddForDay}
         style={{
@@ -917,8 +1017,8 @@ function DayDetailPanel({
           justifyContent: "center",
           gap: 6,
           width: "100%",
-          padding: "10px 0",
-          marginBottom: 18,
+          padding: "11px 0",
+          marginBottom: 22,
           borderRadius: 10,
           cursor: "pointer",
           background: "rgba(0,212,255,0.1)",
@@ -930,7 +1030,9 @@ function DayDetailPanel({
       >
         <Plus size={13} /> Add event on this day
       </button>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+      {/* Event list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {events
           .slice()
           .sort((a, b) => a.start_time.localeCompare(b.start_time))
@@ -941,109 +1043,168 @@ function DayDetailPanel({
               <div
                 key={ev.id}
                 style={{
-                  padding: 16,
                   borderRadius: 14,
                   background: "rgba(0,0,0,0.25)",
                   border: `1px solid ${color}33`,
                   borderLeft: `3px solid ${color}`,
+                  overflow: "hidden",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: 8,
-                  }}
-                >
-                  <p
+                {/* Event image */}
+                {ev.image_url && (
+                  <div
                     style={{
-                      margin: 0,
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "var(--text-bright)",
+                      width: "100%",
+                      height: 130,
+                      overflow: "hidden",
+                      background: "rgba(0,0,0,0.4)",
                     }}
                   >
-                    {ev.title}
-                  </p>
-                  <button
-                    disabled={busy}
-                    onClick={() => onDelete(ev.id)}
+                    <img
+                      src={ev.image_url}
+                      alt={ev.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div style={{ padding: 16 }}>
+                  <div
                     style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 8,
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "var(--text-bright)",
+                      }}
+                    >
+                      {ev.title}
+                    </p>
+                    <button
+                      disabled={busy}
+                      onClick={() => onDelete(ev.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: "5px 9px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        background: "rgba(255,45,155,0.1)",
+                        border: "1px solid rgba(255,45,155,0.3)",
+                        color: "var(--neon-pink)",
+                        opacity: busy ? 0.5 : 1,
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <p
+                    style={{
+                      margin: "6px 0 0",
+                      fontSize: 11,
+                      color: "var(--text-soft)",
                       display: "flex",
                       alignItems: "center",
                       gap: 5,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: "5px 9px",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      flexShrink: 0,
-                      background: "rgba(255,45,155,0.1)",
-                      border: "1px solid rgba(255,45,155,0.3)",
-                      color: "var(--neon-pink)",
-                      opacity: busy ? 0.5 : 1,
                     }}
                   >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-                <p
-                  style={{
-                    margin: "6px 0 0",
-                    fontSize: 11,
-                    color: "var(--text-soft)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                  }}
-                >
-                  <Clock size={12} /> {formatTime(ev.start_time)} –{" "}
-                  {formatTime(ev.end_time)}
-                </p>
-                {/* Comedians from event_comedian pivot */}
-                {ev.comedians && ev.comedians.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
-                    }}
-                  >
-                    {ev.comedians.map((c) => (
-                      <span
-                        key={c.id}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 5,
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: "rgba(0,212,255,0.1)",
-                          color: "var(--neon-blue)",
-                          border: "1px solid rgba(0,212,255,0.2)",
-                        }}
-                      >
-                        <Users size={10} /> {c.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {ev.description && (
-                  <p
-                    style={{
-                      margin: "8px 0 0",
-                      fontSize: 12,
-                      color: "var(--text-muted)",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {ev.description}
+                    <Clock size={12} /> {formatTime(ev.start_time)} –{" "}
+                    {formatTime(ev.end_time)}
                   </p>
-                )}
+
+                  {/* Comedians from event_comedian pivot */}
+                  {ev.comedians && ev.comedians.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 6,
+                      }}
+                    >
+                      {ev.comedians.map((c) => (
+                        <span
+                          key={c.id}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "3px 10px 3px 3px",
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: "rgba(0,212,255,0.1)",
+                            color: "var(--neon-blue)",
+                            border: "1px solid rgba(0,212,255,0.2)",
+                          }}
+                        >
+                          {c.image ? (
+                            <img
+                              src={c.image}
+                              alt={c.name}
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                flexShrink: 0,
+                              }}
+                            />
+                          ) : (
+                            <span
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: "50%",
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background:
+                                  "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
+                                color: "white",
+                                fontSize: 8,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {getInitials(c.name)}
+                            </span>
+                          )}
+                          {c.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {ev.description && (
+                    <p
+                      style={{
+                        margin: "8px 0 0",
+                        fontSize: 12,
+                        color: "var(--text-muted)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {ev.description}
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -1146,23 +1307,28 @@ export default function CalendarPage() {
   const isoDate = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-  const handleSubmit = async (form: EventForm): Promise<boolean> => {
+  const handleSubmit = async (
+    form: EventForm,
+    imageFile: File | null,
+  ): Promise<boolean> => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const payload = {
-        comedian_ids: form.comedian_ids,
-        title: form.title,
-        event_date: form.event_date,
-        start_time: form.start_time,
-        end_time: form.end_time,
-        color: form.color || DEFAULT_COLOR,
-        description: form.description || null,
-      };
+      const formData = new FormData();
+      form.comedian_ids.forEach((id) =>
+        formData.append("comedian_ids[]", String(id)),
+      );
+      formData.append("title", form.title);
+      formData.append("event_date", form.event_date);
+      formData.append("start_time", form.start_time);
+      formData.append("end_time", form.end_time);
+      formData.append("color", form.color || DEFAULT_COLOR);
+      if (form.description) formData.append("description", form.description);
+      if (imageFile) formData.append("image", imageFile);
+
       const res = await fetch("/api/event", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData, // no Content-Type header — browser sets the multipart boundary
       });
       const data = await res.json();
       if (!res.ok || data.success === false) {

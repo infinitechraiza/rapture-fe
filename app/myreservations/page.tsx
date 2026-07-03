@@ -228,7 +228,7 @@ export default function Reservations() {
               Track, manage, and cancel your upcoming table bookings at RAPTURE.
             </p>
             <button
-              onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={"/booking" as any}
               style={{ background: 'linear-gradient(135deg, #ff2d9b, #b94fff)', color: '#fff', border: 'none', borderRadius: 50, padding: '12px 32px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 0 24px rgba(255,45,155,0.35)', fontFamily: 'Space Grotesk, sans-serif' }}
             >
               Book a New Table
@@ -278,7 +278,7 @@ export default function Reservations() {
                   </div>
                   {/* CTA */}
                   <button
-                    onClick={() => document.getElementById('booking-form')?.scrollIntoView({ behavior: 'smooth' })}
+                    onClick={"/booking" as any}
                     style={{ background: 'linear-gradient(135deg, #ff2d9b, #b94fff)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer', fontFamily: 'Space Grotesk, sans-serif', whiteSpace: 'nowrap', boxShadow: '0 0 16px rgba(255,45,155,0.25)' }}
                   >
                     Book a Table

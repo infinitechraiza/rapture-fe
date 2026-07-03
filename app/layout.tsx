@@ -7,8 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: "Rapture Cafe & Bar",
-  description:
-    "Experience luxury and comfort at Rapture Cafe & Bar - Your perfect destination",
+  description: "Experience luxury and comfort at Rapture Cafe & Bar - Your perfect destination",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

@@ -1,6 +1,18 @@
 "use client";
 
-import { Search, Plus, Trash2, Edit2, Upload, X, User, Eye, Calendar, Tag, Quote } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Trash2,
+  Edit2,
+  Upload,
+  X,
+  User,
+  Eye,
+  Calendar,
+  Tag,
+  Quote,
+} from "lucide-react";
 import { useState, useEffect, type ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,7 +20,7 @@ interface Comedian {
   id: number;
   name: string;
   tagline?: string | null;
-  image?: string | null;
+  image_url: string;
   genre?: string | null;
   status: "active" | "inactive";
   created_at: string;
@@ -123,6 +135,9 @@ export default function ComediansPage() {
   const [viewingComedian, setViewingComedian] = useState<Comedian | null>(null);
   const [showViewDrawer, setShowViewDrawer] = useState(false);
   const [isViewClosing, setIsViewClosing] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null); // add this state near your other useState calls
+
+
   const [form, setForm] = useState({
     name: "",
     tagline: "",
@@ -182,14 +197,8 @@ export default function ComediansPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setForm((prev) => ({ ...prev, image: base64 }));
-      setImagePreview(base64);
-    };
-    reader.readAsDataURL(file);
+    setImageFile(file); // keep the real File object, no encoding
+    setImagePreview(URL.createObjectURL(file)); // local blob URL, just for the <img> preview
   };
 
   const closeModal = () => {
@@ -226,10 +235,18 @@ export default function ComediansPage() {
       const url = editingId ? `/api/comedians/${editingId}` : `/api/comedians`;
       const method = editingId ? "PUT" : "POST";
 
+      const formData = new FormData();
+      formData.append("name", form.name);
+      if (form.tagline) formData.append("tagline", form.tagline);
+      if (form.genre) formData.append("genre", form.genre);
+      if (form.bio) formData.append("bio", form.bio);
+      formData.append("status", form.status);
+      formData.append("image", form.image);
+      if (imageFile) formData.append("image", imageFile); // the actual file, sent as binary
+
       const res = await fetch(url, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        method: editingId ? "PUT" : "POST",
+        body: formData, // no Content-Type header — browser sets the multipart boundary itself
       });
 
       const data = await res.json();
@@ -274,13 +291,13 @@ export default function ComediansPage() {
     setForm({
       name: comedian.name,
       tagline: comedian.tagline || "",
-      image: comedian.image || "",
+      image:  "",
       genre: comedian.genre || "",
       bio: "",
       status: comedian.status,
     });
     setEditingId(comedian.id);
-    setImagePreview(comedian.image || "");
+    setImagePreview(comedian.image_url || "");
     openModal();
   };
 
@@ -361,7 +378,8 @@ export default function ComediansPage() {
           borderRadius: 18,
           padding: "26px 28px",
           overflow: "hidden",
-          background: "linear-gradient(135deg, rgba(0,212,255,0.08), rgba(185,79,255,0.06) 60%, transparent)",
+          background:
+            "linear-gradient(135deg, rgba(0,212,255,0.08), rgba(185,79,255,0.06) 60%, transparent)",
           border: "1px solid rgba(0,212,255,0.12)",
         }}
       >
@@ -374,11 +392,15 @@ export default function ComediansPage() {
             width: 220,
             height: 220,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(0,212,255,0.18), transparent 70%)",
+            background:
+              "radial-gradient(circle, rgba(0,212,255,0.18), transparent 70%)",
             pointerEvents: "none",
           }}
         />
-        <div className="flex items-center justify-between flex-wrap gap-4" style={{ position: "relative" }}>
+        <div
+          className="flex items-center justify-between flex-wrap gap-4"
+          style={{ position: "relative" }}
+        >
           <div>
             <p
               style={{
@@ -392,18 +414,40 @@ export default function ComediansPage() {
             >
               Talent Management
             </p>
-            <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "var(--text-bright)", letterSpacing: -0.5 }}>
+            <h1
+              style={{
+                margin: "4px 0 0",
+                fontSize: 26,
+                fontWeight: 800,
+                color: "var(--text-bright)",
+                letterSpacing: -0.5,
+              }}
+            >
               Comedians
             </h1>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
+            <p
+              style={{
+                margin: "4px 0 0",
+                fontSize: 13,
+                color: "var(--text-muted)",
+              }}
+            >
               Manage profiles, categories, and status across your roster.
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <HeaderStat label="Total" value={comedians.length} accent="var(--neon-blue)" />
+            <HeaderStat
+              label="Total"
+              value={comedians.length}
+              accent="var(--neon-blue)"
+            />
             <HeaderStat label="Active" value={activeCount} accent="#10b981" />
-            <HeaderStat label="Inactive" value={inactiveCount} accent="var(--text-muted)" />
+            <HeaderStat
+              label="Inactive"
+              value={inactiveCount}
+              accent="var(--text-muted)"
+            />
 
             <button
               onClick={() => {
@@ -421,7 +465,8 @@ export default function ComediansPage() {
               }}
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200"
               style={{
-                background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
+                background:
+                  "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
                 color: "white",
                 boxShadow: "0 0 16px rgba(0,212,255,0.3)",
               }}
@@ -467,7 +512,8 @@ export default function ComediansPage() {
                 onClick={() => setStatus(s)}
                 className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
                 style={{
-                  background: status === s ? "var(--neon-blue)" : "rgba(0,212,255,0.1)",
+                  background:
+                    status === s ? "var(--neon-blue)" : "rgba(0,212,255,0.1)",
                   color: status === s ? "white" : "var(--text-soft)",
                 }}
               >
@@ -495,11 +541,17 @@ export default function ComediansPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-8" style={{ color: "var(--text-muted)" }}>
+          <div
+            className="text-center py-8"
+            style={{ color: "var(--text-muted)" }}
+          >
             Loading comedians...
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-8" style={{ color: "var(--text-muted)" }}>
+          <div
+            className="text-center py-8"
+            style={{ color: "var(--text-muted)" }}
+          >
             No comedians found
           </div>
         ) : (
@@ -510,18 +562,24 @@ export default function ComediansPage() {
               className="grid items-center px-5 py-3 transition-all duration-200 cursor-pointer"
               style={{
                 gridTemplateColumns: gridCols,
-                borderBottom: i < filtered.length - 1 ? "1px solid rgba(0,212,255,0.06)" : "none",
+                borderBottom:
+                  i < filtered.length - 1
+                    ? "1px solid rgba(0,212,255,0.06)"
+                    : "none",
               }}
               onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLDivElement).style.background = "rgba(0,212,255,0.03)")
+                ((e.currentTarget as HTMLDivElement).style.background =
+                  "rgba(0,212,255,0.03)")
               }
-              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "")}
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLDivElement).style.background = "")
+              }
             >
               {/* Name with Avatar */}
               <div className="flex items-center gap-2.5">
-                {comedian.image ? (
+                {comedian.image_url ? (
                   <img
-                    src={comedian.image}
+                    src={comedian.image_url}
                     alt={comedian.name}
                     className="w-7 h-7 rounded-full object-cover shrink-0"
                   />
@@ -537,7 +595,11 @@ export default function ComediansPage() {
                 )}
                 <span
                   className="text-sm font-medium"
-                  style={{ color: "var(--text-bright)", whiteSpace: "normal", wordBreak: "break-word" }}
+                  style={{
+                    color: "var(--text-bright)",
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                  }}
                 >
                   {comedian.name}
                 </span>
@@ -546,7 +608,11 @@ export default function ComediansPage() {
               {/* Tagline */}
               <span
                 className="text-sm"
-                style={{ color: "var(--text-muted)", whiteSpace: "normal", wordBreak: "break-word" }}
+                style={{
+                  color: "var(--text-muted)",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                }}
               >
                 {comedian.tagline || "—"}
               </span>
@@ -555,7 +621,9 @@ export default function ComediansPage() {
               <span
                 className="text-xs font-medium px-2 py-1 rounded-md w-fit"
                 style={{
-                  color: genreColors[comedian.genre || "Default"] || genreColors.Default,
+                  color:
+                    genreColors[comedian.genre || "Default"] ||
+                    genreColors.Default,
                   background: "rgba(0,212,255,0.08)",
                 }}
               >
@@ -567,16 +635,23 @@ export default function ComediansPage() {
                 <div
                   className="w-1.5 h-1.5 rounded-full"
                   style={{
-                    background: comedian.status === "active" ? "var(--neon-blue)" : "var(--text-muted)",
+                    background:
+                      comedian.status === "active"
+                        ? "var(--neon-blue)"
+                        : "var(--text-muted)",
                   }}
                 />
                 <span
                   className="text-sm"
                   style={{
-                    color: comedian.status === "active" ? "var(--neon-blue)" : "var(--text-muted)",
+                    color:
+                      comedian.status === "active"
+                        ? "var(--neon-blue)"
+                        : "var(--text-muted)",
                   }}
                 >
-                  {comedian.status.charAt(0).toUpperCase() + comedian.status.slice(1)}
+                  {comedian.status.charAt(0).toUpperCase() +
+                    comedian.status.slice(1)}
                 </span>
               </div>
 
@@ -586,9 +661,20 @@ export default function ComediansPage() {
               </span>
 
               {/* Actions */}
-              <div className="flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
-                <RowActionButton icon={<Eye size={14} />} title="View" onClick={() => openViewDrawer(comedian)} />
-                <RowActionButton icon={<Edit2 size={14} />} title="Edit" onClick={() => handleEdit(comedian)} />
+              <div
+                className="flex items-center gap-2.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <RowActionButton
+                  icon={<Eye size={14} />}
+                  title="View"
+                  onClick={() => openViewDrawer(comedian)}
+                />
+                <RowActionButton
+                  icon={<Edit2 size={14} />}
+                  title="Edit"
+                  onClick={() => handleEdit(comedian)}
+                />
                 <RowActionButton
                   icon={<Trash2 size={14} />}
                   title="Delete"
@@ -607,7 +693,11 @@ export default function ComediansPage() {
           {/* Backdrop */}
           <div
             onClick={closeModal}
-            className={isClosing ? "drawer-backdrop drawer-backdrop-out" : "drawer-backdrop drawer-backdrop-in"}
+            className={
+              isClosing
+                ? "drawer-backdrop drawer-backdrop-out"
+                : "drawer-backdrop drawer-backdrop-in"
+            }
             style={{
               position: "absolute",
               inset: 0,
@@ -618,7 +708,11 @@ export default function ComediansPage() {
 
           {/* Panel */}
           <div
-            className={(isClosing ? "drawer-panel drawer-panel-out" : "drawer-panel drawer-panel-in") + " card-neon"}
+            className={
+              (isClosing
+                ? "drawer-panel drawer-panel-out"
+                : "drawer-panel drawer-panel-in") + " card-neon"
+            }
             style={{
               position: "absolute",
               top: 0,
@@ -657,14 +751,21 @@ export default function ComediansPage() {
                 type="button"
                 onClick={closeModal}
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0"
-                style={{ color: "var(--text-muted)", background: "transparent" }}
+                style={{
+                  color: "var(--text-muted)",
+                  background: "transparent",
+                }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,212,255,0.1)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "var(--text-bright)";
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "rgba(0,212,255,0.1)";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "var(--text-bright)";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)";
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "transparent";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "var(--text-muted)";
                 }}
                 aria-label="Close"
               >
@@ -730,6 +831,7 @@ export default function ComediansPage() {
                         type="button"
                         onClick={() => {
                           setImagePreview("");
+                          setImageFile(null);
                           setForm((prev) => ({ ...prev, image: "" }));
                         }}
                         className="text-xs font-medium text-left px-1"
@@ -796,7 +898,10 @@ export default function ComediansPage() {
                   }}
                   placeholder="e.g., Comedy Legend"
                 />
-                <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)" }}>
+                <p
+                  className="text-xs mt-1.5"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   A short line shown beneath their name on listings.
                 </p>
               </div>
@@ -822,7 +927,9 @@ export default function ComediansPage() {
                   }}
                 >
                   <option value="">Select category</option>
-                  <option value="featured-headliners">Featured headliners</option>
+                  <option value="featured-headliners">
+                    Featured headliners
+                  </option>
                   <option value="full-roaster">Full roster</option>
                   <option value="Dark Comedy">New upcomers</option>
                 </select>
@@ -866,7 +973,9 @@ export default function ComediansPage() {
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
                           background:
-                            s === "active" ? "var(--neon-blue)" : "var(--text-muted)",
+                            s === "active"
+                              ? "var(--neon-blue)"
+                              : "var(--text-muted)",
                         }}
                       />
                       {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -944,7 +1053,9 @@ export default function ComediansPage() {
           {/* Panel */}
           <div
             className={
-              (isViewClosing ? "drawer-panel drawer-panel-out" : "drawer-panel drawer-panel-in") + " card-neon"
+              (isViewClosing
+                ? "drawer-panel drawer-panel-out"
+                : "drawer-panel drawer-panel-in") + " card-neon"
             }
             style={{
               position: "absolute",
@@ -984,7 +1095,10 @@ export default function ComediansPage() {
                 type="button"
                 onClick={closeViewDrawer}
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0"
-                style={{ color: "var(--text-muted)", background: "transparent" }}
+                style={{
+                  color: "var(--text-muted)",
+                  background: "transparent",
+                }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.background =
                     "rgba(0,212,255,0.1)";
@@ -1007,9 +1121,9 @@ export default function ComediansPage() {
             <div className="flex-1 overflow-y-auto px-6 py-6">
               {/* Avatar + name block */}
               <div className="flex flex-col items-center text-center mb-6">
-                {viewingComedian.image ? (
+                {viewingComedian.image_url ? (
                   <img
-                    src={viewingComedian.image}
+                    src={viewingComedian.image_url}
                     alt={viewingComedian.name}
                     className="w-20 h-20 rounded-full object-cover mb-3"
                     style={{ border: "1px solid rgba(0,212,255,0.25)" }}
@@ -1114,7 +1228,10 @@ export default function ComediansPage() {
                     >
                       Added on
                     </p>
-                    <p className="text-sm" style={{ color: "var(--text-bright)" }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-bright)" }}
+                    >
                       {formatDate(viewingComedian.created_at)}
                     </p>
                   </div>
@@ -1134,7 +1251,10 @@ export default function ComediansPage() {
                     >
                       Last updated
                     </p>
-                    <p className="text-sm" style={{ color: "var(--text-bright)" }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-bright)" }}
+                    >
                       {formatDate(viewingComedian.updated_at)}
                     </p>
                   </div>
@@ -1159,7 +1279,10 @@ export default function ComediansPage() {
                     >
                       Comedian ID
                     </p>
-                    <p className="text-sm" style={{ color: "var(--text-bright)" }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-bright)" }}
+                    >
                       #{viewingComedian.id}
                     </p>
                   </div>

@@ -14,6 +14,7 @@ import {
   Download,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePathname } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -40,7 +41,9 @@ export function Header() {
   const [imageError, setImageError] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { user, loading, logout } = useAuth();
-
+  const pathname = usePathname();
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
   const getProfileImageUrl = (profileUrl?: string | null): string | null => {
     if (!profileUrl || profileUrl.trim() === "") return null;
     try {
@@ -271,16 +274,16 @@ export function Header() {
                     <Settings className="w-4 h-4" />
                     Profile Settings
                   </Link>
-
-                  <Link
-                    href="/admin"
-                    className="user-dropdown-link flex items-center gap-2"
-                    onClick={() => setIsUserMenuOpen(false)}
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    Dashboard
-                  </Link>
-
+                  {user.user_role === "admin" && (
+                    <Link
+                      href="/admin"
+                      className="user-dropdown-link flex items-center gap-2"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+                  )}
                   <button
                     className="user-dropdown-logout flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={handleLogout}
@@ -385,16 +388,16 @@ export function Header() {
                   <Settings className="w-4 h-4" />
                   Profile Settings
                 </Link>
-
-                <Link
-                  href="/admin"
-                  className="user-dropdown-link flex items-center gap-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Link>
-
+                {user.user_role === "admin" && (
+                  <Link
+                    href="/admin"
+                    className="user-dropdown-link flex items-center gap-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </Link>
+                )}
                 <button
                   className="user-dropdown-logout flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   onClick={handleLogout}

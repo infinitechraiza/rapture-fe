@@ -71,7 +71,8 @@ function FilterDropdown({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -116,7 +117,7 @@ function FilterDropdown({
             borderRadius: 12,
             background: "var(--card-mid)",
             border: "1px solid rgba(0,212,255,0.2)",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
+            boxShadow: "0 12px 32px var(--dropdown-shadow, rgba(0,0,0,0.4))",
             overflow: "hidden",
             padding: 4,
           }}
@@ -346,7 +347,8 @@ export function DataTable<T>({
               style={{
                 background: "var(--card-mid)",
                 border: "1px solid rgba(0,212,255,0.15)",
-                color: page >= lastPage ? "var(--text-muted)" : "var(--text-soft)",
+                color:
+                  page >= lastPage ? "var(--text-muted)" : "var(--text-soft)",
                 opacity: page >= lastPage ? 0.4 : 1,
                 cursor: page >= lastPage ? "not-allowed" : "pointer",
               }}
