@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Calendar,
   Clock,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 const TIME_SLOTS = [
@@ -84,7 +84,6 @@ type DayEvent = {
 const DEFAULT_EVENT_COLOR = "#00d4ff";
 const BUSY_THRESHOLD = 3;
 const FULL_THRESHOLD = 5;
-
 
 function getDayAvailability(
   date: Date,
@@ -721,130 +720,31 @@ function DayEventsModal({
   );
 }
 
-export default function Book() {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const today = new Date();
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [step, setStep] = useState(1);
-  const [dir, setDir] = useState(1);
-
-  const [selectedEvents, setSelectedEvents] = useState<DayEvent[]>([]);
-  const [monthEvents, setMonthEvents] = useState<DayEvent[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
-  const [eventsError, setEventsError] = useState<string | null>(null);
-
-  const [activeDate, setActiveDate] = useState<Date | null>(null);
-  const [selectedEventIds, setSelectedEventIds] = useState<number[]>([]);
-
-  const calendarCells = buildCalendarGrid(viewYear, viewMonth);
-  const router = useRouter();
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const loadMonthEvents = useCallback(async () => {
-    setEventsLoading(true);
-    setEventsError(null);
-    try {
-      const res = await fetch(
-        `/api/event?year=${viewYear}&month=${viewMonth + 1}&per_page=200`,
-        { cache: "no-store" },
-      );
-      const data = await res.json();
-      if (!res.ok || data.success === false)
-        throw new Error(data.message || "Failed to load the schedule.");
-      const list: DayEvent[] = Array.isArray(data.data?.data)
-        ? data.data.data
-        : Array.isArray(data.data)
-          ? data.data
-          : Array.isArray(data)
-            ? data
-            : [];
-      setMonthEvents(list);
-    } catch (err) {
-      setEventsError(
-        err instanceof Error ? err.message : "Failed to load the schedule.",
-      );
-      setMonthEvents([]);
-    } finally {
-      setEventsLoading(false);
-    }
-  }, [viewYear, viewMonth]);
-
-  useEffect(() => {
-    loadMonthEvents();
-  }, [loadMonthEvents]);
-
-  useEffect(() => {
-    if (selectedDate && !selectedTime) setSelectedTime(TIME_SLOTS[0]);
-  }, [selectedDate, selectedTime]);
-
-  const eventsByDay = useMemo(() => {
-    const map: Record<number, DayEvent[]> = {};
-    for (const ev of monthEvents) {
-      if (!ev.event_date) continue;
-      const parts = ev.event_date.split("T")[0].split("-").map(Number);
-      const [evYear, evMonth, evDay] = parts;
-      if (evYear === viewYear && evMonth === viewMonth + 1) {
-        (map[evDay] ||= []).push(ev);
-      }
-    }
-    return map;
-  }, [monthEvents, viewYear, viewMonth]);
-
-  const activeDateEvents = useMemo(() => {
-    if (!activeDate) return [];
-    return eventsByDay[activeDate.getDate()] ?? [];
-  }, [activeDate, eventsByDay]);
-
-  function go(next: number) {
-    setDir(next > step ? 1 : -1);
-    setStep(next);
-    setError("");
-  }
-
-  function prevMonth() {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((y) => y - 1);
-    } else setViewMonth((m) => m - 1);
-  }
-
-  function nextMonth() {
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((y) => y + 1);
-    } else setViewMonth((m) => m + 1);
-  }
-
-  const handleNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
-    [],
-  );
-  const handleEmailChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
-    [],
-  );
-  const handlePhoneChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value),
-    [],
-  );
-
-  const Step3Component = ({
-    name,
-    email,
-    phone,
-    error,
-    handleNameChange,
-    handleEmailChange,
-    handlePhoneChange,
-  }: any) => (
+// ─── Moved out of Book() ─────────────────────────────────────────────
+// This used to be defined inside Book(), which meant it got a brand new
+// function identity on every re-render (Book re-renders on every keystroke
+// via setName/setEmail/setPhone). React saw a "different" component type
+// in the same slot each time and unmounted/remounted the <input> elements,
+// dropping focus after every character — that's why typing didn't work.
+// Living at module scope gives it a stable identity across renders.
+function Step3InfoStep({
+  name,
+  email,
+  phone,
+  error,
+  handleNameChange,
+  handleEmailChange,
+  handlePhoneChange,
+}: {
+  name: string;
+  email: string;
+  phone: string;
+  error: string;
+  handleNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleEmailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handlePhoneChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
     <div className="space-y-4">
       {[
         {
@@ -887,9 +787,7 @@ export default function Book() {
             <Icon size={11} /> {label}
           </label>
           <input
-            value={
-              !user ? val : String(user?.[key as keyof typeof user] ?? "")
-            }
+            value={val}
             onChange={set}
             type={type}
             className="w-full px-4 py-3 rounded-lg"
@@ -930,6 +828,203 @@ export default function Book() {
         </p>
       )}
     </div>
+  );
+}
+
+export default function Book() {
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [step, setStep] = useState(1);
+  const [dir, setDir] = useState(1);
+
+  const [selectedEvents, setSelectedEvents] = useState<DayEvent[]>([]);
+  const [monthEvents, setMonthEvents] = useState<DayEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+
+  const [activeDate, setActiveDate] = useState<Date | null>(null);
+  const [selectedEventIds, setSelectedEventIds] = useState<number[]>([]);
+
+  const calendarCells = buildCalendarGrid(viewYear, viewMonth);
+  const [selectedComedianId, setSelectedComedianId] = useState<number | null>(
+    null,
+  );
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const preselectComedianId = searchParams.get("comedian");
+  const appliedPreselectRef = useRef(false);
+
+  const loadMonthEvents = useCallback(async () => {
+    setEventsLoading(true);
+    setEventsError(null);
+    try {
+      const res = await fetch(
+        `/api/event?year=${viewYear}&month=${viewMonth + 1}&per_page=200`,
+        { cache: "no-store" },
+      );
+      const data = await res.json();
+      if (!res.ok || data.success === false)
+        throw new Error(data.message || "Failed to load the schedule.");
+      const list: DayEvent[] = Array.isArray(data.data?.data)
+        ? data.data.data
+        : Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data)
+            ? data
+            : [];
+      setMonthEvents(list);
+    } catch (err) {
+      setEventsError(
+        err instanceof Error ? err.message : "Failed to load the schedule.",
+      );
+      setMonthEvents([]);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [viewYear, viewMonth]);
+
+  useEffect(() => {
+    loadMonthEvents();
+  }, [loadMonthEvents]);
+
+  useEffect(() => {
+    if (selectedDate && !selectedTime) setSelectedTime(TIME_SLOTS[0]);
+  }, [selectedDate, selectedTime]);
+
+  useEffect(() => {
+    if (!user) return;
+    setName((prev) => prev || String((user as any)?.name ?? ""));
+    setEmail((prev) => prev || String((user as any)?.email ?? ""));
+    setPhone((prev) => prev || String((user as any)?.phone ?? ""));
+  }, [user]);
+
+  const eventsByDay = useMemo(() => {
+    const map: Record<number, DayEvent[]> = {};
+    for (const ev of monthEvents) {
+      if (!ev.event_date) continue;
+      const parts = ev.event_date.split("T")[0].split("-").map(Number);
+      const [evYear, evMonth, evDay] = parts;
+      if (evYear === viewYear && evMonth === viewMonth + 1) {
+        (map[evDay] ||= []).push(ev);
+      }
+    }
+    return map;
+  }, [monthEvents, viewYear, viewMonth]);
+
+  const activeDateEvents = useMemo(() => {
+    if (!activeDate) return [];
+    return eventsByDay[activeDate.getDate()] ?? [];
+  }, [activeDate, eventsByDay]);
+
+  useEffect(() => {
+    if (eventsLoading) return;
+    if (appliedPreselectRef.current) return;
+    if (!preselectComedianId) return;
+    appliedPreselectRef.current = true;
+    if (eventsError) return;
+
+    const cleanedId = preselectComedianId.replace(/^"+|"+$/g, "");
+    const comedianId = Number(cleanedId);
+    if (!comedianId) return;
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const matches = monthEvents
+      .filter((ev) => ev.comedians?.some((c) => c.id === comedianId))
+      .map((ev) => {
+        const [datePart] = ev.event_date.split("T");
+        const [y, m, d] = datePart.split("-").map(Number);
+        return {
+          ev,
+          eventDate: new Date(y, (m || 1) - 1, d || 1),
+          isSolo: (ev.comedians?.length ?? 0) === 1,
+        };
+      })
+      .filter(({ eventDate }) => eventDate >= now)
+      .sort((a, b) => {
+        const diff = a.eventDate.getTime() - b.eventDate.getTime();
+        return diff !== 0
+          ? diff
+          : a.ev.start_time.localeCompare(b.ev.start_time);
+      });
+
+    if (matches.length === 0) {
+      toast({
+        title: "No upcoming shows found",
+        description:
+          "This comedian doesn't have any scheduled shows yet — pick any open date below.",
+      });
+      return;
+    }
+
+    const soloMatch = matches.find((m) => m.isSolo);
+    const { ev: nextEvent, eventDate, isSolo } = soloMatch ?? matches[0];
+    const selectedComedianId = nextEvent.comedians?.find(
+      (c) => c.id === comedianId,
+    )?.id;
+
+    setSelectedComedianId(selectedComedianId ?? comedianId);
+
+    setViewYear(eventDate.getFullYear());
+    setViewMonth(eventDate.getMonth());
+    setSelectedEventIds([nextEvent.id]);
+    setActiveDate(eventDate);
+
+    const comedian = nextEvent.comedians?.find((c) => c.id === comedianId);
+    const comedianName = comedian?.name ?? "This comedian";
+    toast({
+      title: isSolo ? "Found their solo show!" : "Found their next show!",
+      description: isSolo
+        ? `${comedianName ?? "This comedian"}'s solo show — "${nextEvent.title}" — is on ${formatEventDateDisplay(nextEvent.event_date)}. It's already checked for you below.`
+        : `${comedianName ?? "This comedian"} doesn't have a solo show coming up, but they're on the lineup for "${nextEvent.title}" on ${formatEventDateDisplay(nextEvent.event_date)}. It's already checked for you below.`,
+    });
+  }, [preselectComedianId, monthEvents, eventsLoading, eventsError, toast]);
+
+  function go(next: number) {
+    setDir(next > step ? 1 : -1);
+    setStep(next);
+    setError("");
+  }
+
+  function prevMonth() {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else setViewMonth((m) => m - 1);
+  }
+
+  function nextMonth() {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else setViewMonth((m) => m + 1);
+  }
+
+  const handleNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
+    [],
+  );
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
+    [],
+  );
+  const handlePhoneChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value),
+    [],
   );
 
   const ConfirmationScreen = ({
@@ -1316,7 +1411,6 @@ export default function Book() {
               We'll contact you shortly to confirm your slot.
             </motion.div>
 
-            {/* Book Again Button */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1387,19 +1481,31 @@ export default function Book() {
         description: errorMsg,
         variant: "destructive",
       });
+      return;
     }
+
+    if (!selectedDate) {
+      setError("Please select a date first.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
+      const finalName = name || String((user as any)?.name ?? "");
+      const finalEmail = email || String((user as any)?.email ?? "");
+      const finalPhone = phone || String((user as any)?.phone ?? "");
+
       const res = await fetch("/api/booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          email,
-          phone,
-          booking_date: `${formatDate(selectedDate!)} ${formatTimeTo24(selectedTime)}:00`,
+          name: finalName,
+          email: finalEmail,
+          phone: finalPhone,
+          booking_date: `${formatDate(selectedDate)} ${formatTimeTo24(selectedTime)}:00`,
           event_ids: selectedEvents.map((ev) => ev.id),
+          selected_events: JSON.stringify(selectedEvents),
         }),
       });
       const data = await res.json();
@@ -1411,31 +1517,26 @@ export default function Book() {
       setLoading(false);
     }
   }
-  // Add this reset function inside the Book component
+
   const resetBooking = () => {
-    // Form inputs
     setSelectedDate(null);
     setSelectedTime("");
     setName("");
     setEmail("");
     setPhone("");
 
-    // Submission state
     setSubmitted(false);
     setLoading(false);
     setError("");
 
-    // Events state
     setSelectedEvents([]);
     setSelectedEventIds([]);
     setActiveDate(null);
 
-    // Step navigation
     setStep(1);
     setDir(1);
   };
 
-  // Then update the ConfirmationScreen component call to:
   if (submitted)
     return (
       <ConfirmationScreen
@@ -1445,7 +1546,7 @@ export default function Book() {
         email={email}
         phone={phone}
         selectedEvents={selectedEvents}
-        onBookAgain={resetBooking} // ← Add this
+        onBookAgain={resetBooking}
       />
     );
 
@@ -1453,7 +1554,7 @@ export default function Book() {
   const nameValid = name.trim().length >= 1;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const phoneValid = phone.replace(/\D/g, "").length >= 7;
-  const step2Valid = user || nameValid && emailValid && phoneValid;
+  const step2Valid = user || (nameValid && emailValid && phoneValid);
   const step3Valid = true;
 
   const canProceed =
@@ -1964,7 +2065,7 @@ export default function Book() {
     );
   }
 
-  const StepComponent = [Step1, Step3Component, Step3Confirm][step - 1];
+  const StepComponent = [Step1, Step3InfoStep, Step3Confirm][step - 1];
 
   return (
     <div
@@ -2159,7 +2260,7 @@ export default function Book() {
                 transition={{ duration: 0.25, ease: "easeInOut" }}
               >
                 {step === 2 ? (
-                  <Step3Component
+                  <Step3InfoStep
                     name={name}
                     email={email}
                     phone={phone}

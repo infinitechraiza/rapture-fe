@@ -13,14 +13,29 @@ function getAuthToken(request: NextRequest): string | null {
   );
 }
 
+function authHeaders(token: string | null): HeadersInit {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function safeJson(res: Response) {
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return {
+      message: text.slice(0, 500) || "Upstream returned a non-JSON response.",
+    };
+  }
+}
+
 // GET /api/event/[id]
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const token = getAuthToken(request);
-    const { id } = context.params;
+    const { id } = await params;
 
     const res = await fetch(`${getApiUrl()}/api/event/${id}`, {
       method: "GET",
@@ -47,27 +62,32 @@ export async function GET(
 }
 
 // PUT /api/event/[id]
-export async function PUT(
+export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const token = getAuthToken(request);
-    const { id } = context.params;
-    const body = await request.json();
+  const { id } = await params;
+  const token = getAuthToken(request);
 
-    const res = await fetch(`${getApiUrl()}/api/event/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-      body: JSON.stringify(body),
+  try {
+    const formData = await request.formData();
+    formData.append("_method", "PATCH");
+
+    const response = await fetch(`${getApiUrl()}/api/event/${id}`, {
+      method: "POST", // spoofed to PUT via _method above
+      headers: { Accept: "application/json", ...authHeaders(token) },
+      body: formData,
     });
 
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    const data = await safeJson(response);
+
+    if (!response.ok)
+      console.error(
+        "PUT /api/events/[id] upstream error:",
+        response.status,
+        data,
+      );
+    return NextResponse.json(data, { status: response.status });
   } catch (err) {
     console.error("PUT /api/event/[id] error:", err);
     return NextResponse.json(

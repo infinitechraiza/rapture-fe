@@ -16,6 +16,10 @@ function getAuthToken(request: NextRequest): string | null {
   );
 }
 
+function authHeaders(token: string | null): HeadersInit {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // GET ALL /api/event
 export async function GET(request: NextRequest) {
   try {
@@ -72,12 +76,7 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(`${API_URL}/api/event`, {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-        // Do NOT set Content-Type — fetch will generate the correct
-        // multipart boundary itself. Setting it manually breaks the boundary.
-      },
+      headers: { Accept: "application/json", ...authHeaders(token) },
       body: formData,
     });
 

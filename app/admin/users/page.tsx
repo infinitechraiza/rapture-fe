@@ -1,117 +1,82 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import {
-  UserPlus,
-  Shield,
-  ShieldCheck,
-  Eye,
-  Pencil,
-  History,
-  X,
-  Mail,
-  Phone,
-  Calendar,
-  Check,
+  Plus,
+  Trash2,
   Loader2,
-  Lock,
+  ImageOff,
+  X,
+  Pencil,
+  AlertTriangle,
+  Image as ImageIcon,
+  AlignLeft,
+  Tag,
+  ChevronDown,
+  Check,
+  Eye,
 } from "lucide-react";
-import {
-  useState,
-  useEffect,
-  useCallback,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
-import {
-  DataTable,
-  DataTableColumn,
-  FilterConfig,
-} from "@/components/admin/DataTable";
 import { toast } from "@/hooks/use-toast";
 
-// ── Types ────────────────────────────────────────────────────
-
-type ApiUser = {
+type GalleryItem = {
   id: number;
-  name: string;
-  email: string;
-  phone: string | null;
-  profile_url: string | null;
-  user_role: "user" | "admin";
-  status: "pending" | "approved";
-  created_at: string;
-};
-
-type ActivityLog = {
-  id: number;
-  action: string;
+  title: string;
+  category: string | null;
   description: string | null;
-  changes: Record<string, { old: string; new: string }> | null;
-  created_at: string;
-  actor: { id: number; name: string; email: string } | null;
+  image: string | null;
+  image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
 };
 
-type PanelMode = "create" | "edit" | "view" | "activity";
-
-const ROLE_OPTIONS = [
-  { value: "all", label: "All roles" },
-  { value: "admin", label: "Admin" },
-  { value: "user", label: "User" },
-];
-
-const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "All statuses" },
-  { value: "approved", label: "Approved" },
-  { value: "pending", label: "Pending" },
-];
-
-const roleStyle: Record<string, { bg: string; color: string }> = {
-  admin: { bg: "rgba(0,212,255,0.12)", color: "var(--neon-blue)" },
-  user: { bg: "rgba(255,255,255,0.06)", color: "var(--text-soft)" },
-};
-
-const statusDot: Record<string, string> = {
-  approved: "var(--neon-blue)",
-  pending: "#f59e0b",
-};
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function formatDate(d: string) {
+async function getErrorMessage(res: Response, fallback: string) {
   try {
-    return new Date(d).toLocaleDateString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    });
+    const json = await res.clone().json();
+    return json?.error || json?.message || fallback;
   } catch {
-    return d;
+    try {
+      const text = await res.text();
+      return text || fallback;
+    } catch {
+      return fallback;
+    }
   }
 }
 
-function formatDateTime(d: string) {
-  try {
-    return new Date(d).toLocaleString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return d;
-  }
-}
+// ── Shared style tokens ───────────────────────────────────────
+const inputBase: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 14px",
+  background: "rgba(0,0,0,0.3)",
+  border: "1px solid rgba(0,212,255,0.2)",
+  borderRadius: 10,
+  color: "var(--text-bright)",
+  fontSize: 13,
+  outline: "none",
+  boxSizing: "border-box",
+  fontFamily: "inherit",
+  transition: "border-color 0.2s",
+};
+const inputErr: React.CSSProperties = {
+  ...inputBase,
+  border: "1px solid rgba(255,45,155,0.5)",
+};
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 1.5,
+  textTransform: "uppercase",
+  color: "var(--text-muted)",
+  marginBottom: 6,
+};
+const errMsg: React.CSSProperties = {
+  fontSize: 11,
+  color: "var(--neon-pink)",
+  marginTop: 4,
+};
 
-// ── Stat pill ────────────────────────────────────────────────
-
+// ── Header stat pill ─────────────────────────────────────────
 function HeaderStat({
   label,
   value,
@@ -158,812 +123,1260 @@ function HeaderStat({
   );
 }
 
-// ── Row action icons (view / edit / activity) ───────────────
-
-function RowActionButton({
-  icon,
-  title,
-  onClick,
-  danger,
-}: {
-  icon: ReactNode;
-  title: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  const idleColor = danger ? "var(--neon-pink)" : "var(--text-muted)";
-  const hoverBg = danger ? "rgba(255,45,155,0.12)" : "rgba(0,212,255,0.1)";
-  const hoverColor = danger ? "var(--neon-pink)" : "var(--neon-blue)";
-  return (
-    <button
-      title={title}
-      onClick={onClick}
-      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200"
-      style={{ color: idleColor, background: "transparent" }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = hoverBg;
-        (e.currentTarget as HTMLButtonElement).style.color = hoverColor;
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-        (e.currentTarget as HTMLButtonElement).style.color = idleColor;
-      }}
-    >
-      {icon}
-    </button>
-  );
-}
-
-function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: "rgba(0,212,255,0.08)", color: "var(--neon-blue)" }}
-      >
-        {icon}
-      </div>
-      <div>
-        <p
-          className="text-xs font-semibold uppercase tracking-wide mb-0.5"
-          style={{ color: "var(--text-muted)" }}
-        >
-          {label}
-        </p>
-        <div className="text-sm" style={{ color: "var(--text-bright)" }}>
-          {value}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RolePill({ role }: { role: string }) {
-  const style = roleStyle[role] ?? roleStyle.user;
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md" style={style}>
-      {role === "admin" ? <ShieldCheck size={10} /> : <Shield size={10} />}
-      {role.charAt(0).toUpperCase() + role.slice(1)}
-    </span>
-  );
-}
-
-function StatusDot({ status }: { status: string }) {
-  const color = statusDot[status] ?? "var(--text-muted)";
-  return (
-    <span className="inline-flex items-center gap-1.5 text-sm" style={{ color }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
-  );
-}
-
-// ── Shared form fields type ──────────────────────────────────
-
-type FormFields = {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-};
-
-const EMPTY_FORM: FormFields = { name: "", email: "", phone: "", password: "" };
-
-// ── User drawer: create / edit / view / activity ─────────────
-
-function UserDrawer({
+// ── Slide-out panel ────────────────────────────────────────────
+function SlidePanel({
   open,
-  isClosing,
   onClose,
-  user,
-  mode,
-  onSaved,
-  onModeChange,
+  width = 460,
+  glowColor = "rgba(0,212,255,0.15)",
+  children,
 }: {
   open: boolean;
-  isClosing: boolean;
   onClose: () => void;
-  user: ApiUser | null;
-  mode: PanelMode;
-  onSaved: (updated: ApiUser) => void;
-  onModeChange: (mode: PanelMode) => void;
+  width?: number;
+  glowColor?: string;
+  children: React.ReactNode;
 }) {
-  const isCreate = mode === "create";
-  const isEdit = mode === "edit";
-  const isView = mode === "view";
-  const isActivity = mode === "activity";
-
-  const [form, setForm] = useState<FormFields>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [logsError, setLogsError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    if (isCreate) {
-      setForm(EMPTY_FORM);
-    } else if (user) {
-      setForm({
-        name: user.name,
-        email: user.email,
-        phone: user.phone ?? "",
-        password: "",
-      });
-    }
-    setSaveError(null);
-  }, [open, isCreate, user]);
-
-  const loadActivity = useCallback(async () => {
-    if (!user) return;
-    setLogsLoading(true);
-    setLogsError(null);
-    try {
-      const res = await fetch(`/api/users/${user.id}/activity`, {
-        cache: "no-store",
-      });
-
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error(
-          `Activity endpoint returned ${res.status} ${res.statusText} (not JSON). Check that /api/users/[id]/activity/route.ts exists.`,
-        );
-      }
-
-      const data = await res.json();
-      if (!res.ok || data.success === false)
-        throw new Error(data.message || "Failed to load activity.");
-      setLogs(data.data?.data ?? []);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load activity.";
-      setLogsError(message);
-
-      toast({
-        variant: "destructive",
-        title: "Couldn't load activity",
-        description: message,
-      });
-    } finally {
-      setLogsLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (open && isActivity) loadActivity();
-  }, [open, isActivity, loadActivity]);
-
-  const handleSave = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const url = isCreate ? "/api/users" : `/api/users/${user!.id}`;
-      const method = isCreate ? "POST" : "PUT";
-
-      const body: Record<string, unknown> = {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-      };
-      if (isCreate) body.password = form.password;
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok || data.success === false) {
-        const msg = data.errors
-          ? Object.values(data.errors).flat().join(" ")
-          : data.message || "Failed to save user.";
-        throw new Error(msg);
-      }
-      onSaved(data.data);
-
-      toast({
-        title: isCreate ? "User created" : "User updated",
-        description: isCreate
-          ? `${data.data.name} was added and is pending approval.`
-          : `${data.data.name}'s details were saved.`,
-      });
-
-      onClose();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save user.";
-      setSaveError(message);
-      toast({
-        variant: "destructive",
-        title: isCreate ? "Couldn't create user" : "Couldn't update user",
-        description: message,
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (!open) return null;
-  // Nothing to show if edit/view/activity were requested without a target user
-  if (!isCreate && !user) return null;
-
-  const eyebrow = isCreate
-    ? "New"
-    : isEdit
-      ? "Edit"
-      : isActivity
-        ? "Activity"
-        : "Details";
-
-  const title = isCreate
-    ? "Add user"
-    : isEdit
-      ? "Edit user"
-      : isActivity
-        ? "Activity log"
-        : "User profile";
-
   return (
-    <div className="fixed inset-0 z-50" aria-modal="true" role="dialog">
-      {/* Backdrop */}
+    <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
       <div
         onClick={onClose}
-        className={isClosing ? "drawer-backdrop drawer-backdrop-out" : "drawer-backdrop drawer-backdrop-in"}
         style={{
           position: "absolute",
           inset: 0,
           background: "rgba(6,6,20,0.8)",
           backdropFilter: "blur(8px)",
+          animation: "fade-in 0.2s ease",
         }}
       />
-
-      {/* Panel */}
       <div
-        className={
-          (isClosing ? "drawer-panel drawer-panel-out" : "drawer-panel drawer-panel-in") + " card-neon"
-        }
+        className="card-neon"
         style={{
           position: "absolute",
           top: 0,
           right: 0,
-          height: "100%",
-          width: "min(440px, 100vw)",
+          height: "100vh",
+          width: "100%",
+          maxWidth: width,
           borderRadius: 0,
           borderTop: "none",
           borderRight: "none",
           borderBottom: "none",
-          boxShadow: "0 0 60px rgba(0,212,255,0.15)",
           display: "flex",
           flexDirection: "column",
+          boxShadow: `0 0 60px ${glowColor}`,
+          animation: "slide-in-right 0.25s ease",
         }}
       >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-6 py-5 shrink-0"
-          style={{ borderBottom: "1px solid rgba(0,212,255,0.1)" }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            {!isCreate && user && (
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                style={{
-                  background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-                }}
-              >
-                {getInitials(user.name)}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p
-                className="text-[11px] font-semibold uppercase tracking-widest mb-1"
-                style={{ color: "var(--neon-blue)" }}
-              >
-                {eyebrow}
-              </p>
-              <h2
-                className="text-lg font-bold truncate"
-                style={{ color: "var(--text-bright)" }}
-              >
-                {isCreate ? title : user?.name}
-              </h2>
-              {!isCreate && user && (
-                <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
-                  {user.email}
-                </p>
-              )}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0"
-            style={{ color: "var(--text-muted)", background: "transparent" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,212,255,0.1)";
-              (e.currentTarget as HTMLButtonElement).style.color = "var(--text-bright)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-              (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)";
-            }}
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          {saveError && (
-            <div
-              className="mb-4 px-3.5 py-2.5 rounded-lg text-xs"
-              style={{
-                background: "rgba(255,45,155,0.1)",
-                border: "1px solid rgba(255,45,155,0.3)",
-                color: "var(--neon-pink)",
-              }}
-            >
-              {saveError}
-            </div>
-          )}
-
-          {/* ── VIEW MODE ── */}
-          {isView && user && (
-            <div className="space-y-6">
-              <div className="flex flex-col items-center text-center">
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-white text-xl font-bold mb-3"
-                  style={{
-                    background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-                  }}
-                >
-                  {getInitials(user.name)}
-                </div>
-                <h3 className="text-lg font-bold" style={{ color: "var(--text-bright)" }}>
-                  {user.name}
-                </h3>
-                <div className="flex items-center gap-2 mt-3 flex-wrap justify-center">
-                  <RolePill role={user.user_role} />
-                  <StatusDot status={user.status} />
-                </div>
-              </div>
-
-              <div
-                className="h-px w-full"
-                style={{ background: "rgba(0,212,255,0.08)" }}
-              />
-
-              <div className="space-y-4">
-                <DetailRow icon={<Mail size={14} />} label="Email" value={user.email} />
-                <DetailRow icon={<Phone size={14} />} label="Phone" value={user.phone || "—"} />
-                <DetailRow icon={<Calendar size={14} />} label="Joined" value={formatDate(user.created_at)} />
-                <DetailRow icon={<ShieldCheck size={14} />} label="User ID" value={`#${user.id}`} />
-              </div>
-            </div>
-          )}
-
-          {/* ── ACTIVITY MODE ── */}
-          {isActivity && (
-            <div className="space-y-3">
-              {logsLoading ? (
-                <div className="space-y-2.5">
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      style={{
-                        height: 64,
-                        borderRadius: 12,
-                        background:
-                          "linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.07), rgba(255,255,255,0.03))",
-                        backgroundSize: "200% 100%",
-                        animation: "shimmer 1.4s ease-in-out infinite",
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : logsError ? (
-                <div
-                  className="px-3.5 py-2.5 rounded-lg text-xs"
-                  style={{
-                    background: "rgba(255,45,155,0.1)",
-                    border: "1px solid rgba(255,45,155,0.3)",
-                    color: "var(--neon-pink)",
-                  }}
-                >
-                  {logsError}
-                </div>
-              ) : logs.length === 0 ? (
-                <div className="text-center py-10 text-xs" style={{ color: "var(--text-muted)" }}>
-                  <History size={22} style={{ margin: "0 auto 10px", opacity: 0.3, display: "block" }} />
-                  No activity recorded for this user yet.
-                </div>
-              ) : (
-                logs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-3.5 rounded-xl"
-                    style={{
-                      background: "rgba(0,0,0,0.25)",
-                      border: "1px solid rgba(0,212,255,0.12)",
-                      borderLeft: "3px solid var(--neon-blue)",
-                    }}
-                  >
-                    <p className="text-xs font-bold" style={{ color: "var(--text-bright)" }}>
-                      {log.description || log.action}
-                    </p>
-
-                    {log.changes && Object.keys(log.changes).length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {Object.entries(log.changes).map(([field, diff]) => (
-                          <div
-                            key={field}
-                            className="text-[11px] flex gap-1.5 flex-wrap"
-                            style={{ color: "var(--text-muted)" }}
-                          >
-                            <span className="font-semibold" style={{ color: "var(--text-soft)" }}>
-                              {field}:
-                            </span>
-                            <span style={{ textDecoration: "line-through", opacity: 0.6 }}>
-                              {diff.old ?? "—"}
-                            </span>
-                            <span>→</span>
-                            <span style={{ color: "var(--neon-blue)" }}>{diff.new ?? "—"}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <p className="mt-2 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                      {log.actor ? `by ${log.actor.name}` : "by system"} · {formatDateTime(log.created_at)}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* ── CREATE / EDIT MODE: form ── */}
-          {(isCreate || isEdit) && (
-            <form id="user-form" onSubmit={handleSave} className="space-y-6">
-              <div>
-                <label
-                  htmlFor="user-name"
-                  className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Name
-                </label>
-                <input
-                  id="user-name"
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="form-input-neon w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition-all"
-                  style={{
-                    background: "var(--card-mid)",
-                    border: "1px solid rgba(0,212,255,0.15)",
-                    color: "var(--text-bright)",
-                  }}
-                  placeholder="Full name"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="user-email"
-                  className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Email
-                </label>
-                <input
-                  id="user-email"
-                  type="email"
-                  required
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="form-input-neon w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition-all"
-                  style={{
-                    background: "var(--card-mid)",
-                    border: "1px solid rgba(0,212,255,0.15)",
-                    color: "var(--text-bright)",
-                  }}
-                  placeholder="name@example.com"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="user-phone"
-                  className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Phone
-                </label>
-                <input
-                  id="user-phone"
-                  type="text"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="form-input-neon w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition-all"
-                  style={{
-                    background: "var(--card-mid)",
-                    border: "1px solid rgba(0,212,255,0.15)",
-                    color: "var(--text-bright)",
-                  }}
-                  placeholder="Optional"
-                />
-              </div>
-
-              {isCreate && (
-                <div>
-                  <label
-                    htmlFor="user-password"
-                    className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      <Lock size={11} /> Password
-                    </span>
-                  </label>
-                  <input
-                    id="user-password"
-                    type="password"
-                    required
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="form-input-neon w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition-all"
-                    style={{
-                      background: "var(--card-mid)",
-                      border: "1px solid rgba(0,212,255,0.15)",
-                      color: "var(--text-bright)",
-                    }}
-                    placeholder="Min 8 characters"
-                  />
-                </div>
-              )}
-            </form>
-          )}
-        </div>
-
-        {/* Sticky footer */}
-        <div
-          className="flex items-center gap-2.5 px-6 py-4 shrink-0"
-          style={{
-            borderTop: "1px solid rgba(0,212,255,0.1)",
-            background: "transparent",
-          }}
-        >
-          {isView && user && (
-            <>
-              <button
-                type="button"
-                onClick={() => onModeChange("activity")}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
-                style={{
-                  background: "rgba(0,212,255,0.08)",
-                  color: "var(--text-soft)",
-                  border: "1px solid rgba(0,212,255,0.15)",
-                }}
-              >
-                <History size={13} />
-                Activity
-              </button>
-              <button
-                type="button"
-                onClick={() => onModeChange("edit")}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
-                style={{
-                  background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-                  color: "white",
-                  boxShadow: "0 0 16px rgba(0,212,255,0.25)",
-                }}
-              >
-                <Pencil size={13} />
-                Edit
-              </button>
-            </>
-          )}
-
-          {isActivity && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
-              style={{
-                background: "rgba(0,212,255,0.08)",
-                color: "var(--text-soft)",
-                border: "1px solid rgba(0,212,255,0.15)",
-              }}
-            >
-              Close
-            </button>
-          )}
-
-          {(isCreate || isEdit) && (
-            <>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
-                style={{
-                  background: "rgba(0,212,255,0.08)",
-                  color: "var(--text-soft)",
-                  border: "1px solid rgba(0,212,255,0.15)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="user-form"
-                disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
-                style={{
-                  background: saving
-                    ? "rgba(0,212,255,0.25)"
-                    : "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-                  color: "white",
-                  opacity: saving ? 0.7 : 1,
-                  cursor: saving ? "not-allowed" : "pointer",
-                  boxShadow: saving ? "none" : "0 0 16px rgba(0,212,255,0.25)",
-                }}
-              >
-                {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-                {saving ? "Saving…" : isCreate ? "Add user" : "Save changes"}
-              </button>
-            </>
-          )}
+        <div style={{ flex: 1, overflowY: "auto", padding: 28, boxSizing: "border-box" }}>
+          {children}
         </div>
       </div>
+      <style>{`
+        @keyframes slide-in-right {
+          from { transform: translateX(100%); opacity: 0.6; }
+          to   { transform: translateX(0);    opacity: 1;   }
+        }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </div>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────
+// ── On/off switch ───────────────────────────────────────────────
+function ActiveToggle({
+  active,
+  onChange,
+}: {
+  active: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      onClick={() => onChange(!active)}
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        height: 24,
+        width: 44,
+        borderRadius: 999,
+        flexShrink: 0,
+        cursor: "pointer",
+        border: "none",
+        transition: "background 0.2s",
+        background: active
+          ? "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))"
+          : "rgba(255,255,255,0.12)",
+      }}
+    >
+      <span
+        style={{
+          height: 18,
+          width: 18,
+          borderRadius: "50%",
+          background: "#fff",
+          transition: "transform 0.2s",
+          transform: active ? "translateX(23px)" : "translateX(3px)",
+        }}
+      />
+    </button>
+  );
+}
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<ApiUser[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// ── Shared image picker ──────────────────────────────────────────
+function ImagePicker({
+  preview,
+  fileName,
+  onPick,
+  inputRef,
+  onChange,
+  label = "Choose file",
+}: {
+  preview: string | null;
+  fileName: string | null;
+  onPick: () => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  label?: string;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div
+        onClick={onPick}
+        style={{
+          width: 76,
+          height: 76,
+          borderRadius: 12,
+          overflow: "hidden",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0,0,0,0.3)",
+          border: "1px dashed rgba(0,212,255,0.3)",
+          flexShrink: 0,
+        }}
+      >
+        {preview ? (
+          <img src={preview} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <ImageIcon size={22} style={{ color: "var(--text-muted)" }} />
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onPick}
+        style={{
+          padding: "9px 14px",
+          borderRadius: 9,
+          cursor: "pointer",
+          background: "rgba(0,212,255,0.08)",
+          border: "1px solid rgba(0,212,255,0.2)",
+          color: "var(--neon-blue)",
+          fontSize: 12,
+          fontWeight: 600,
+        }}
+      >
+        {fileName || label}
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" onChange={onChange} style={{ display: "none" }} />
+    </div>
+  );
+}
 
-  const [search, setSearch] = useState("");
-  const [role, setRole] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [page, setPage] = useState(1);
-  const perPage = 8;
+// ── Category dropdown with "Add Category" ────────────────────────
+function CategorySelect({
+  value,
+  onChange,
+  categories,
+  onAddCategory,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  categories: string[];
+  onAddCategory: (c: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const [panelMode, setPanelMode] = useState<PanelMode>("create");
-
-  // Lock body scroll while drawer is open
   useEffect(() => {
-    document.body.style.overflow = panelOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [panelOpen]);
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setAdding(false);
+        setNewCategory("");
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const loadUsers = useCallback(async () => {
+  function handleSelect(cat: string) {
+    onChange(cat);
+    setOpen(false);
+    setAdding(false);
+  }
+
+  function handleConfirmAdd() {
+    const trimmed = newCategory.trim();
+    if (!trimmed) return;
+    onAddCategory(trimmed);
+    onChange(trimmed);
+    setNewCategory("");
+    setAdding(false);
+    setOpen(false);
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          ...inputBase,
+          paddingLeft: 32,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+      >
+        <span style={{ color: value ? "var(--text-bright)" : "var(--text-muted)" }}>
+          {value || "Select a category"}
+        </span>
+        <ChevronDown
+          size={14}
+          style={{
+            color: "var(--text-muted)",
+            transform: open ? "rotate(180deg)" : "none",
+            transition: "transform 0.15s",
+          }}
+        />
+      </button>
+      <Tag size={13} style={{ position: "absolute", left: 12, top: 12, color: "var(--text-muted)" }} />
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            zIndex: 20,
+            borderRadius: 10,
+            background: "var(--card-dark)",
+            border: "1px solid var(--border-blue)",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ maxHeight: 200, overflowY: "auto" }}>
+            {categories.length === 0 && !adding && (
+              <div style={{ padding: "12px 14px", fontSize: 12, color: "var(--text-muted)" }}>
+                No categories yet.
+              </div>
+            )}
+            {categories.map((cat) => {
+              const selected = cat === value;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => handleSelect(cat)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    padding: "9px 14px",
+                    background: selected ? "rgba(0,212,255,0.12)" : "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    color: "var(--text-bright)",
+                    textAlign: "left",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!selected)
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--card-mid)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!selected)
+                      (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                  }}
+                >
+                  {cat}
+                  {selected && <Check size={13} style={{ color: "var(--neon-blue)" }} />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ borderTop: "1px solid var(--border-blue)" }}>
+            {adding ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: 8 }}>
+                <input
+                  autoFocus
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleConfirmAdd();
+                    }
+                    if (e.key === "Escape") {
+                      setAdding(false);
+                      setNewCategory("");
+                    }
+                  }}
+                  placeholder="New category name"
+                  style={{
+                    flex: 1,
+                    padding: "7px 10px",
+                    borderRadius: 7,
+                    background: "var(--card-mid)",
+                    border: "1px solid var(--border-blue)",
+                    color: "var(--text-bright)",
+                    fontSize: 12,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleConfirmAdd}
+                  style={{
+                    padding: "7px 10px",
+                    borderRadius: 7,
+                    border: "none",
+                    cursor: "pointer",
+                    background: "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "10px 14px",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--neon-blue)",
+                }}
+              >
+                <Plus size={13} /> Add Category
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── View Image slide panel ────────────────────────────────────────
+function ViewImagePanel({
+  item,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  item: GalleryItem | null;
+  onClose: () => void;
+  onEdit: (item: GalleryItem) => void;
+  onDelete: (item: GalleryItem) => void;
+}) {
+  return (
+    <SlidePanel open={!!item} onClose={onClose} width={480} glowColor="rgba(0,212,255,0.15)">
+      {item && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: "rgba(0,212,255,0.12)",
+                  border: "1px solid rgba(0,212,255,0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Eye size={16} style={{ color: "var(--neon-blue)" }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-bright)" }}>
+                  Image Details
+                </h3>
+                <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+                  Full gallery entry
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: "transparent",
+                border: "1px solid rgba(0,212,255,0.15)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--text-muted)",
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div style={{ height: 1, background: "rgba(0,212,255,0.1)", marginBottom: 24 }} />
+
+          {/* Full image */}
+          <div
+            style={{
+              width: "100%",
+              borderRadius: 14,
+              overflow: "hidden",
+              marginBottom: 20,
+              border: "1px solid rgba(0,212,255,0.15)",
+              background: "var(--card-mid)",
+              position: "relative",
+            }}
+          >
+            {item.image_url ? (
+              <img
+                src={item.image_url}
+                alt={item.title}
+                style={{ width: "100%", maxHeight: 360, objectFit: "cover", display: "block" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: 240,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ImageOff size={32} style={{ color: "var(--text-muted)" }} />
+              </div>
+            )}
+
+            {/* Status badge overlaid on image */}
+            <div
+              style={{
+                position: "absolute",
+                top: 12,
+                left: 12,
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                background: item.is_active ? "rgba(0,212,255,0.2)" : "rgba(255,255,255,0.15)",
+                color: item.is_active ? "var(--neon-blue)" : "#fff",
+                border: `1px solid ${item.is_active ? "rgba(0,212,255,0.5)" : "rgba(255,255,255,0.3)"}`,
+                backdropFilter: "blur(6px)",
+              }}
+            >
+              {item.is_active ? "Active" : "Inactive"}
+            </div>
+          </div>
+
+          {/* Title */}
+          <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: "var(--text-bright)" }}>
+            {item.title}
+          </h2>
+
+          {/* Category */}
+          {item.category && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 12px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 600,
+                background: "rgba(0,212,255,0.1)",
+                border: "1px solid rgba(0,212,255,0.25)",
+                color: "var(--neon-blue)",
+                marginBottom: 20,
+              }}
+            >
+              <Tag size={11} />
+              {item.category}
+            </div>
+          )}
+
+          {/* Full description */}
+          <div style={{ marginTop: item.category ? 0 : 12 }}>
+            <label style={labelStyle}>Description</label>
+            {item.description ? (
+              <p
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  color: "var(--text-soft)",
+                  whiteSpace: "pre-wrap",
+                  margin: 0,
+                }}
+              >
+                {item.description}
+              </p>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--text-muted)", fontStyle: "italic", margin: 0 }}>
+                No description provided.
+              </p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div style={{ marginTop: 32, display: "flex", gap: 10 }}>
+            <button
+              onClick={() => onEdit(item)}
+              style={{
+                flex: 1,
+                padding: "11px 0",
+                borderRadius: 10,
+                cursor: "pointer",
+                border: "none",
+                background: "linear-gradient(135deg, #b94fff, var(--neon-pink))",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: 0.8,
+                boxShadow: "0 0 20px rgba(185,79,255,0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <Pencil size={14} /> Edit
+            </button>
+            <button
+              onClick={() => onDelete(item)}
+              style={{
+                padding: "11px 20px",
+                borderRadius: 10,
+                cursor: "pointer",
+                border: "1px solid rgba(255,45,155,0.4)",
+                background: "rgba(255,45,155,0.1)",
+                color: "var(--neon-pink)",
+                fontSize: 13,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+          </div>
+        </>
+      )}
+    </SlidePanel>
+  );
+}
+
+// ── Add Image slide panel ────────────────────────────────────────
+function AddImagePanel({
+  open,
+  onClose,
+  onSubmit,
+  submitting,
+  categories,
+  onAddCategory,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (
+    form: { title: string; category: string; description: string; isActive: boolean },
+    file: File | null,
+  ) => Promise<boolean>;
+  submitting: boolean;
+  categories: string[];
+  onAddCategory: (c: string) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ title?: string; file?: string }>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setTitle("");
+      setCategory("");
+      setDescription("");
+      setIsActive(true);
+      setFile(null);
+      setPreview(null);
+      setErrors({});
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, [open]);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0] ?? null;
+    setFile(selected);
+    setPreview(selected ? URL.createObjectURL(selected) : null);
+    if (selected) setErrors((p) => ({ ...p, file: undefined }));
+  }
+
+  async function handleSubmit() {
+    const e: typeof errors = {};
+    if (!title.trim()) e.title = "Title is required.";
+    if (!file) e.file = "An image is required.";
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
+
+    const ok = await onSubmit({ title, category, description, isActive }, file);
+    if (ok) onClose();
+  }
+
+  return (
+    <SlidePanel open={open} onClose={onClose} width={460} glowColor="rgba(0,212,255,0.15)">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: "rgba(0,212,255,0.12)",
+              border: "1px solid rgba(0,212,255,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ImageIcon size={16} style={{ color: "var(--neon-blue)" }} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-bright)" }}>
+              New Image
+            </h3>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+              Added to the public gallery
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "transparent",
+            border: "1px solid rgba(0,212,255,0.15)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--text-muted)",
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+      <div style={{ height: 1, background: "rgba(0,212,255,0.1)", marginBottom: 24 }} />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div>
+          <label style={labelStyle}>
+            Image <span style={{ color: "var(--neon-pink)" }}>*</span>
+          </label>
+          <ImagePicker
+            preview={preview}
+            fileName={file?.name ?? null}
+            onPick={() => fileInputRef.current?.click()}
+            inputRef={fileInputRef}
+            onChange={handleFileChange}
+          />
+          {errors.file && <p style={errMsg}>{errors.file}</p>}
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Title <span style={{ color: "var(--neon-pink)" }}>*</span>
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (errors.title) setErrors((p) => ({ ...p, title: undefined }));
+            }}
+            placeholder="e.g. Drag Extravaganza"
+            style={errors.title ? inputErr : inputBase}
+          />
+          {errors.title && <p style={errMsg}>{errors.title}</p>}
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Category{" "}
+            <span style={{ marginLeft: 6, color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+              — optional
+            </span>
+          </label>
+          <CategorySelect
+            value={category}
+            onChange={setCategory}
+            categories={categories}
+            onAddCategory={onAddCategory}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Description{" "}
+            <span style={{ marginLeft: 6, color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+              — optional
+            </span>
+          </label>
+          <div style={{ position: "relative" }}>
+            <AlignLeft size={13} style={{ position: "absolute", left: 12, top: 12, color: "var(--text-muted)" }} />
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a short caption…"
+              style={{ ...inputBase, paddingLeft: 32, resize: "none", lineHeight: 1.6 }}
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 14px",
+            borderRadius: 10,
+            background: "rgba(0,0,0,0.2)",
+            border: "1px solid rgba(0,212,255,0.15)",
+          }}
+        >
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--text-bright)" }}>
+              {isActive ? "Active" : "Inactive"}
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
+              {isActive ? "Visible on the public gallery" : "Hidden from the public gallery"}
+            </p>
+          </div>
+          <ActiveToggle active={isActive} onChange={setIsActive} />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 28, display: "flex", gap: 10 }}>
+        <button
+          onClick={onClose}
+          disabled={submitting}
+          style={{
+            flex: 1,
+            padding: "11px 0",
+            borderRadius: 10,
+            cursor: "pointer",
+            background: "transparent",
+            border: "1px solid rgba(0,212,255,0.2)",
+            color: "var(--text-soft)",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          style={{
+            flex: 1,
+            padding: "11px 0",
+            borderRadius: 10,
+            cursor: "pointer",
+            border: "none",
+            background: "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: 0.8,
+            boxShadow: "0 0 20px rgba(0,212,255,0.3)",
+            opacity: submitting ? 0.6 : 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          {submitting && <Loader2 size={14} className="animate-spin" />}
+          {submitting ? "Adding…" : "Add to Gallery"}
+        </button>
+      </div>
+    </SlidePanel>
+  );
+}
+
+// ── Edit Image slide panel ───────────────────────────────────────
+function EditImagePanel({
+  item,
+  onClose,
+  onSubmit,
+  submitting,
+  categories,
+  onAddCategory,
+}: {
+  item: GalleryItem | null;
+  onClose: () => void;
+  onSubmit: (
+    form: { title: string; category: string; description: string; isActive: boolean },
+    file: File | null,
+  ) => Promise<boolean>;
+  submitting: boolean;
+  categories: string[];
+  onAddCategory: (c: string) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ title?: string }>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (item) {
+      setTitle(item.title);
+      setCategory(item.category ?? "");
+      setDescription(item.description ?? "");
+      setIsActive(item.is_active);
+      setFile(null);
+      setPreview(item.image_url ?? null);
+      setErrors({});
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, [item]);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0] ?? null;
+    setFile(selected);
+    setPreview(selected ? URL.createObjectURL(selected) : item?.image_url ?? null);
+  }
+
+  async function handleSubmit() {
+    if (!title.trim()) {
+      setErrors({ title: "Title is required." });
+      return;
+    }
+    const ok = await onSubmit({ title, category, description, isActive }, file);
+    if (ok) onClose();
+  }
+
+  return (
+    <SlidePanel open={!!item} onClose={onClose} width={460} glowColor="rgba(185,79,255,0.15)">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: "rgba(185,79,255,0.12)",
+              border: "1px solid rgba(185,79,255,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Pencil size={16} style={{ color: "#b94fff" }} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-bright)" }}>
+              Edit Image
+            </h3>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+              Update the gallery entry
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "transparent",
+            border: "1px solid rgba(0,212,255,0.15)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--text-muted)",
+          }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+      <div style={{ height: 1, background: "rgba(0,212,255,0.1)", marginBottom: 24 }} />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div>
+          <label style={labelStyle}>Image</label>
+          <ImagePicker
+            preview={preview}
+            fileName={file?.name ?? null}
+            onPick={() => fileInputRef.current?.click()}
+            inputRef={fileInputRef}
+            onChange={handleFileChange}
+            label="Replace file"
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Title <span style={{ color: "var(--neon-pink)" }}>*</span>
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (errors.title) setErrors({});
+            }}
+            style={errors.title ? inputErr : inputBase}
+          />
+          {errors.title && <p style={errMsg}>{errors.title}</p>}
+        </div>
+
+        <div>
+          <label style={labelStyle}>Category</label>
+          <CategorySelect
+            value={category}
+            onChange={setCategory}
+            categories={categories}
+            onAddCategory={onAddCategory}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Description</label>
+          <div style={{ position: "relative" }}>
+            <AlignLeft size={13} style={{ position: "absolute", left: 12, top: 12, color: "var(--text-muted)" }} />
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{ ...inputBase, paddingLeft: 32, resize: "none", lineHeight: 1.6 }}
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 14px",
+            borderRadius: 10,
+            background: "rgba(0,0,0,0.2)",
+            border: "1px solid rgba(0,212,255,0.15)",
+          }}
+        >
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--text-bright)" }}>
+              {isActive ? "Active" : "Inactive"}
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
+              {isActive ? "Visible on the public gallery" : "Hidden from the public gallery"}
+            </p>
+          </div>
+          <ActiveToggle active={isActive} onChange={setIsActive} />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 28, display: "flex", gap: 10 }}>
+        <button
+          onClick={onClose}
+          disabled={submitting}
+          style={{
+            flex: 1,
+            padding: "11px 0",
+            borderRadius: 10,
+            cursor: "pointer",
+            background: "transparent",
+            border: "1px solid rgba(0,212,255,0.2)",
+            color: "var(--text-soft)",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          style={{
+            flex: 1,
+            padding: "11px 0",
+            borderRadius: 10,
+            cursor: "pointer",
+            border: "none",
+            background: "linear-gradient(135deg, #b94fff, var(--neon-pink))",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: 0.8,
+            boxShadow: "0 0 20px rgba(185,79,255,0.3)",
+            opacity: submitting ? 0.6 : 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          {submitting && <Loader2 size={14} className="animate-spin" />}
+          {submitting ? "Saving…" : "Save Changes"}
+        </button>
+      </div>
+    </SlidePanel>
+  );
+}
+
+// ── Category filter bar ───────────────────────────────────────────
+function CategoryFilterBar({
+  categories,
+  active,
+  onSelect,
+}: {
+  categories: string[];
+  active: string;
+  onSelect: (c: string) => void;
+}) {
+  const tabs = ["All", ...categories];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {tabs.map((tab) => {
+        const isActive = active === tab;
+        return (
+          <button
+            key={tab}
+            onClick={() => onSelect(tab)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.15s",
+              background: isActive ? "rgba(0,212,255,0.15)" : "rgba(255,255,255,0.04)",
+              border: isActive ? "1px solid rgba(0,212,255,0.5)" : "1px solid rgba(255,255,255,0.1)",
+              color: isActive ? "var(--neon-blue)" : "var(--text-muted)",
+            }}
+          >
+            {tab}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main page ───────────────────────────────────────────────────
+export default function GalleryPage() {
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  // Categories manually added via "Add Category" but not yet used by any item
+  const [extraCategories, setExtraCategories] = useState<string[]>([]);
+
+  const [viewingItem, setViewingItem] = useState<GalleryItem | null>(null);
+  const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<GalleryItem | null>(null);
+
+  useEffect(() => {
+    fetchGallery();
+  }, []);
+
+  async function fetchGallery() {
     setLoading(true);
-    setError(null);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        per_page: String(perPage),
-        search,
-        role,
-        status,
+      const res = await fetch("/api/gallery");
+      if (!res.ok) {
+        const message = await getErrorMessage(res, "Failed to load gallery");
+        throw new Error(message);
+      }
+      const json = await res.json();
+      setItems(json.data ?? []);
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Couldn't load gallery",
+        description: e.message ?? "Something went wrong",
       });
-      const res = await fetch(`/api/users?${params.toString()}`, { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok || data.success === false) throw new Error(data.message || "Failed to load users.");
-      setUsers(data.data?.data ?? []);
-      setTotal(data.data?.total ?? 0);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load users.";
-      setError(message);
-      toast({ variant: "destructive", title: "Couldn't load users", description: message });
     } finally {
       setLoading(false);
     }
-  }, [page, search, role, status]);
+  }
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+  async function handleAddImage(
+    form: { title: string; category: string; description: string; isActive: boolean },
+    file: File | null,
+  ): Promise<boolean> {
+    setAddSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("category", form.category);
+      formData.append("description", form.description);
+      formData.append("is_active", form.isActive ? "1" : "0");
+      if (file) formData.append("image", file);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, role, status]);
+      const res = await fetch("/api/gallery", { method: "POST", body: formData });
+      if (!res.ok) {
+        const message = await getErrorMessage(res, "Failed to add image");
+        throw new Error(message);
+      }
+      const json = await res.json();
+      setItems((prev) => [json.data, ...prev]);
+      toast({ title: "Added", description: "Image added to the gallery." });
+      return true;
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Couldn't add image",
+        description: e.message ?? "Something went wrong",
+      });
+      return false;
+    } finally {
+      setAddSubmitting(false);
+    }
+  }
 
-  const approvedCount = users.filter((u) => u.status === "approved").length;
-  const pendingCount = users.filter((u) => u.status === "pending").length;
+  async function handleSaveEdit(
+    form: { title: string; category: string; description: string; isActive: boolean },
+    file: File | null,
+  ): Promise<boolean> {
+    if (!editingItem) return false;
+    setEditSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("category", form.category);
+      formData.append("description", form.description);
+      formData.append("is_active", form.isActive ? "1" : "0");
+      if (file) formData.append("image", file);
 
-  const openPanel = (mode: PanelMode, user: ApiUser | null) => {
-    setSelectedUser(user);
-    setPanelMode(mode);
-    setPanelOpen(true);
-  };
+      const res = await fetch(`/api/gallery/${editingItem.id}`, { method: "PUT", body: formData });
+      if (!res.ok) {
+        const message = await getErrorMessage(res, "Failed to update image");
+        throw new Error(message);
+      }
+      const json = await res.json();
+      setItems((prev) => prev.map((i) => (i.id === editingItem.id ? json.data : i)));
+      // Keep the view panel's data fresh if it was pointing at the item we just edited
+      setViewingItem((prev) => (prev && prev.id === editingItem.id ? json.data : prev));
+      toast({ title: "Saved", description: "Gallery item updated." });
+      return true;
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Couldn't save changes",
+        description: e.message ?? "Something went wrong",
+      });
+      return false;
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
 
-  const closePanel = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setPanelOpen(false);
-      setIsClosing(false);
-    }, 220);
-  };
+  async function confirmDelete() {
+    if (!confirmDeleteItem) return;
+    const id = confirmDeleteItem.id;
+    setConfirmDeleteItem(null);
+    setDeletingId(id);
+    const prevItems = items;
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    // Close the view panel if it was showing the item being deleted
+    setViewingItem((prev) => (prev && prev.id === id ? null : prev));
 
-  const columns: DataTableColumn<ApiUser>[] = [
-    {
-      key: "name",
-      label: "User",
-      width: "1.3fr",
-      render: (u) => (
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-            style={{ background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))" }}
-          >
-            {getInitials(u.name)}
-          </div>
-          <span
-            className="text-sm font-medium"
-            style={{ color: "var(--text-bright)", whiteSpace: "normal", wordBreak: "break-word" }}
-          >
-            {u.name}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "email",
-      label: "Email",
-      width: "1.3fr",
-      render: (u) => (
-        <span className="text-sm" style={{ color: "var(--text-muted)", whiteSpace: "normal", wordBreak: "break-word" }}>
-          {u.email}
-        </span>
-      ),
-    },
-    { key: "user_role", label: "Role", width: "0.8fr", render: (u) => <RolePill role={u.user_role} /> },
-    { key: "status", label: "Status", width: "0.9fr", render: (u) => <StatusDot status={u.status} /> },
-    {
-      key: "created_at",
-      label: "Joined",
-      width: "0.9fr",
-      render: (u) => <span className="text-sm" style={{ color: "var(--text-muted)" }}>{formatDate(u.created_at)}</span>,
-    },
-    {
-      key: "actions",
-      label: "Actions",
-      width: "120px",
-      render: (u) => (
-        <div className="flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
-          <RowActionButton icon={<Eye size={14} />} title="View" onClick={() => openPanel("view", u)} />
-          <RowActionButton icon={<Pencil size={14} />} title="Edit" onClick={() => openPanel("edit", u)} />
-          <RowActionButton
-            icon={<History size={14} />}
-            title="Activity log"
-            onClick={() => openPanel("activity", u)}
-          />
-        </div>
-      ),
-    },
-  ];
+    try {
+      const res = await fetch(`/api/gallery/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const message = await getErrorMessage(res, "Failed to delete image");
+        throw new Error(message);
+      }
+      toast({ title: "Deleted", description: "Image removed from the gallery." });
+    } catch (e: any) {
+      setItems(prevItems);
+      toast({
+        variant: "destructive",
+        title: "Couldn't delete image",
+        description: e.message ?? "Something went wrong",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
-  const filters: FilterConfig[] = [
-    { key: "role", label: "Role", options: ROLE_OPTIONS, value: role },
-    { key: "status", label: "Status", options: STATUS_FILTER_OPTIONS, value: status },
-  ];
+  // Distinct categories from loaded items + any manually added ones, sorted alphabetically
+  const categories = Array.from(
+    new Set([
+      ...items.map((i) => i.category).filter((c): c is string => !!c && c.trim() !== ""),
+      ...extraCategories,
+    ]),
+  ).sort();
+
+  function handleAddCategory(cat: string) {
+    setExtraCategories((prev) => (prev.includes(cat) ? prev : [...prev, cat]));
+  }
+
+  const filteredItems =
+    activeCategory === "All" ? items : items.filter((i) => i.category === activeCategory);
+
+  const activeCount = items.filter((i) => i.is_active).length;
+  const inactiveCount = items.length - activeCount;
 
   return (
     <div className="space-y-6 flex-1 overflow-y-auto p-6 min-h-screen">
@@ -974,7 +1387,7 @@ export default function UsersPage() {
           borderRadius: 18,
           padding: "26px 28px",
           overflow: "hidden",
-          background: "linear-gradient(135deg, rgba(0,212,255,0.08), rgba(185,79,255,0.06) 60%, transparent)",
+          background: "linear-gradient(135deg, rgba(0,212,255,0.08), rgba(255,45,155,0.06) 60%, transparent)",
           border: "1px solid rgba(0,212,255,0.12)",
         }}
       >
@@ -1003,144 +1416,259 @@ export default function UsersPage() {
                 color: "var(--neon-blue)",
               }}
             >
-              Team Management
+              Media Library
             </p>
-            <h1 style={{ margin: "4px 0 0", fontSize: 26, fontWeight: 800, color: "var(--text-bright)", letterSpacing: -0.5 }}>
-              Users
+            <h1
+              style={{
+                margin: "4px 0 0",
+                fontSize: 26,
+                fontWeight: 800,
+                color: "var(--text-bright)",
+                letterSpacing: -0.5,
+              }}
+            >
+              Gallery
             </h1>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
-              Manage accounts, roles, and access across your organization.
+              Manage images shown on the public Gallery page.
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <HeaderStat label="Total" value={total} accent="var(--neon-blue)" />
-            <HeaderStat label="Approved" value={approvedCount} accent="#10b981" />
-            <HeaderStat label="Pending" value={pendingCount} accent="#f59e0b" />
+            <HeaderStat label="Total" value={items.length} accent="var(--neon-blue)" />
+            <HeaderStat label="Active" value={activeCount} accent="#10b981" />
+            <HeaderStat label="Inactive" value={inactiveCount} accent="var(--text-muted)" />
 
             <button
+              onClick={() => setShowAddPanel(true)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200"
               style={{
-                background: "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-                color: "white",
+                background: "linear-gradient(135deg, var(--neon-blue), var(--neon-pink))",
+                color: "#fff",
                 boxShadow: "0 0 16px rgba(0,212,255,0.3)",
               }}
-              onClick={() => openPanel("create", null)}
             >
-              <UserPlus size={14} />
-              Add User
+              <Plus size={15} />
+              Add Image
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── DataTable ── */}
-      <DataTable
-        columns={columns}
-        rows={users}
-        rowKey={(u) => u.id}
-        loading={loading}
-        error={error}
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search users..."
-        filters={filters}
-        onFilterChange={(key, value) => {
-          if (key === "role") setRole(value);
-          if (key === "status") setStatus(value);
-        }}
-        page={page}
-        perPage={perPage}
-        total={total}
-        onPageChange={setPage}
-        onRowClick={(u) => openPanel("view", u)}
-      />
-
-      {/* ── Slide-out drawer: create / view / edit / activity ── */}
-      {panelOpen && (
-        <UserDrawer
-          open={panelOpen}
-          isClosing={isClosing}
-          onClose={closePanel}
-          user={selectedUser}
-          mode={panelMode}
-          onModeChange={(m) => setPanelMode(m)}
-          onSaved={(updated) => {
-            setUsers((prev) => {
-              const exists = prev.some((u) => u.id === updated.id);
-              return exists ? prev.map((u) => (u.id === updated.id ? updated : u)) : [updated, ...prev];
-            });
-            setSelectedUser(updated);
-          }}
+      {/* Category filters */}
+      {!loading && items.length > 0 && (
+        <CategoryFilterBar
+          categories={categories}
+          active={activeCategory}
+          onSelect={setActiveCategory}
         />
       )}
 
-      <style jsx global>{`
-        @keyframes drawerSlideIn {
-          from {
-            transform: translateX(100%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-        @keyframes drawerSlideOut {
-          from {
-            transform: translateX(0);
-          }
-          to {
-            transform: translateX(100%);
-          }
-        }
-        @keyframes backdropFadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        @keyframes backdropFadeOut {
-          from {
-            opacity: 1;
-          }
-          to {
-            opacity: 0;
-          }
-        }
-        @keyframes shimmer {
-          0% {
-            background-position: 200% 0;
-          }
-          100% {
-            background-position: -200% 0;
-          }
-        }
-        .drawer-panel-in {
-          animation: drawerSlideIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .drawer-panel-out {
-          animation: drawerSlideOut 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
-        }
-        .drawer-backdrop-in {
-          animation: backdropFadeIn 240ms ease-out forwards;
-        }
-        .drawer-backdrop-out {
-          animation: backdropFadeOut 200ms ease-in forwards;
-        }
-        .form-input-neon:focus {
-          border-color: var(--neon-blue) !important;
-          box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .drawer-panel-in,
-          .drawer-panel-out,
-          .drawer-backdrop-in,
-          .drawer-backdrop-out {
-            animation: none !important;
-          }
-        }
-      `}</style>
+      {/* 5-column image grid */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="animate-spin" size={28} style={{ color: "var(--neon-blue)" }} />
+        </div>
+      ) : items.length === 0 ? (
+        <div
+          className="text-center py-16 text-sm rounded-lg"
+          style={{ color: "var(--text-muted)", border: "1px solid rgba(0,212,255,0.1)" }}
+        >
+          No images yet. Click "Add Image" to upload one.
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div
+          className="text-center py-16 text-sm rounded-lg"
+          style={{ color: "var(--text-muted)", border: "1px solid rgba(0,212,255,0.1)" }}
+        >
+          No images in this category.
+        </div>
+      ) : (
+        <div className="grid grid-cols-5 gap-4">
+          {filteredItems.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => setViewingItem(item)}
+              className="rounded-lg overflow-hidden group relative aspect-square"
+              style={{ border: "1px solid rgba(0,212,255,0.1)", cursor: "pointer" }}
+            >
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="absolute inset-0 w-full h-full flex items-center justify-center"
+                  style={{ background: "var(--card-mid)" }}
+                >
+                  <ImageOff size={24} style={{ color: "var(--text-muted)" }} />
+                </div>
+              )}
+
+              {/* Status badge */}
+              <div
+                className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+                style={{
+                  background: item.is_active ? "rgba(0,212,255,0.2)" : "rgba(255,255,255,0.12)",
+                  color: item.is_active ? "var(--neon-blue)" : "var(--text-muted)",
+                  border: `1px solid ${item.is_active ? "rgba(0,212,255,0.4)" : "rgba(255,255,255,0.15)"}`,
+                  backdropFilter: "blur(6px)",
+                }}
+              >
+                {item.is_active ? "Active" : "Inactive"}
+              </div>
+
+              {/* Hover actions — purple edit, pink delete */}
+              <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingItem(item);
+                  }}
+                  className="w-7 h-7 rounded-md flex items-center justify-center"
+                  style={{ background: "#b94fff", color: "#fff" }}
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDeleteItem(item);
+                  }}
+                  disabled={deletingId === item.id}
+                  className="w-7 h-7 rounded-md flex items-center justify-center"
+                  style={{ background: "var(--neon-pink, #ff2d9b)", color: "#fff" }}
+                >
+                  {deletingId === item.id ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
+                </button>
+              </div>
+
+              {/* Text overlay with gradient shadow */}
+              <div
+                className="absolute bottom-0 left-0 right-0 z-10 p-3 pt-10"
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 45%, rgba(0,0,0,0.25) 75%, transparent 100%)",
+                }}
+              >
+                <p className="text-sm font-semibold truncate" style={{ color: "#fff" }}>
+                  {item.title}
+                </p>
+                {item.category && (
+                  <p className="text-[11px] font-medium mb-1" style={{ color: "var(--neon-blue)" }}>
+                    {item.category}
+                  </p>
+                )}
+                {item.description && (
+                  <p
+                    className="text-[11px] leading-snug"
+                    style={{
+                      color: "rgba(255,255,255,0.75)",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {item.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* View / Add / Edit slide panels */}
+      <ViewImagePanel
+        item={viewingItem}
+        onClose={() => setViewingItem(null)}
+        onEdit={(item) => {
+          setViewingItem(null);
+          setEditingItem(item);
+        }}
+        onDelete={(item) => {
+          setViewingItem(null);
+          setConfirmDeleteItem(item);
+        }}
+      />
+      <AddImagePanel
+        open={showAddPanel}
+        onClose={() => setShowAddPanel(false)}
+        onSubmit={handleAddImage}
+        submitting={addSubmitting}
+        categories={categories}
+        onAddCategory={handleAddCategory}
+      />
+      <EditImagePanel
+        item={editingItem}
+        onClose={() => setEditingItem(null)}
+        onSubmit={handleSaveEdit}
+        submitting={editSubmitting}
+        categories={categories}
+        onAddCategory={handleAddCategory}
+      />
+
+      {/* Delete confirmation modal */}
+      {confirmDeleteItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.7)" }}
+          onClick={() => setConfirmDeleteItem(null)}
+        >
+          <div
+            className="card-neon p-6 space-y-4 w-full max-w-sm"
+            style={{ background: "var(--card-dark, #0d0d2b)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: "rgba(255,45,155,0.15)", color: "#ff2d9b" }}
+              >
+                <AlertTriangle size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold" style={{ color: "var(--text-bright)" }}>
+                  Delete this image?
+                </h3>
+                <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                  "{confirmDeleteItem.title}" will be permanently removed from the gallery. This
+                  can't be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDeleteItem(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "var(--text-muted)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: "#ff2d9b", color: "#fff" }}
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

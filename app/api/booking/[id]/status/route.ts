@@ -1,44 +1,46 @@
-import { getApiUrl } from "@/lib/api-url";
-import { cookies } from "next/dist/server/request/cookies";
-
 import { NextRequest, NextResponse } from "next/server";
+import { getApiUrl } from "@/lib/api-url";
 
-// UPDATE STATUS
+function getAuthToken(request: NextRequest): string | null {
+  // Try Authorization header first, then fall back to cookies
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+
+  // Try both possible cookie names
+  return (
+    request.cookies.get("token")?.value ??
+    request.cookies.get("auth_token")?.value ??
+    null
+  );
+}
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const cookieStore = await cookies();
-
+    const { id } = await params;
+    const token = getAuthToken(request);
     const body = await request.json();
-    const token = cookieStore.get("auth_token")?.value;
 
-    const response = await fetch(
-      `${getApiUrl()}/api/booking/${params.id}/status`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          status: body.status,
-          notes: body.notes,
-          client_email: body.client_email,
-        }),
+    const response = await fetch(`${getApiUrl()}/api/booking/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
       },
-    );
-
-    const data = await response.json();
-
-    return NextResponse.json(data, {
-      status: response.status,
+      body: JSON.stringify({
+        status: body.status,
+        notes: body.notes,
+      }),
     });
+
+    const data = await response.json().catch(() => ({}));
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
-      { message: "Failed to update booking" },
+      { success: false, message: "Failed to update booking" },
       { status: 500 },
     );
   }

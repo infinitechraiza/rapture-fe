@@ -4,15 +4,17 @@ import { cookies } from "next/dist/server/request/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
 type Params = {
-  params: Promise<{ id: string }>
-}
-
-const token = (await cookies()).get("auth_token")?.value;
+  params: Promise<{ id: string }>;
+};
 
 // GET ONE
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    const { id } = await params
+    const { id } = await params;
+    const token = (await cookies()).get("auth_token")?.value;
 
     const res = await fetch(`${getApiUrl()}/api/booking/${id}`, {
       method: "GET",
@@ -21,29 +23,28 @@ export async function GET(request: NextRequest, { params }: Params) {
         Authorization: token ? `Bearer ${token}` : "",
       },
       cache: "no-store",
-    })
+    });
 
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (err) {
     return NextResponse.json(
       { message: "Failed to get bookings", err },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
-
-
 
 // UPDATE
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
-    const { id } = await params
-    
-    const formData = await request.formData()
+    const { id } = await params;
+    const token = (await cookies()).get("auth_token")?.value;
+
+    const formData = await request.formData();
 
     // Laravel method spoofing (important)
-    formData.append("_method", "PUT")
+    formData.append("_method", "PUT");
 
     const res = await fetch(`${getApiUrl()}/api/bookings/${id}`, {
       method: "POST",
@@ -52,60 +53,60 @@ export async function PUT(request: NextRequest, { params }: Params) {
         Authorization: token ? `Bearer ${token}` : "",
       },
       body: formData,
-    })
+    });
 
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (err) {
     return NextResponse.json(
       { message: "Failed to update bookings", err },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
 
 // UPDATE STATUS
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const body = await request.json()
+    const { id } = await params;
+    const body = await request.json();
+    const token = (await cookies()).get("auth_token")?.value;
 
-    const response = await fetch(
-      `${getApiUrl()}/api/bookings/${params.id}/status`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify(body),
+    const response = await fetch(`${getApiUrl()}/api/bookings/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
       },
-    )
+      body: JSON.stringify(body),
+    });
 
-    const data = await response.json()
+    const data = await response.json();
 
     return NextResponse.json(data, {
       status: response.status,
-    })
+    });
   } catch (error) {
     return NextResponse.json(
       { message: "Failed to update booking" },
       { status: 500 },
-    )
+    );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const token = (await cookies()).get("auth_token")?.value;
 
-    const response = await fetch(`${getApiUrl()}/api/comedians/${params.id}`, {
+    const response = await fetch(`${getApiUrl()}/api/comedians/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,

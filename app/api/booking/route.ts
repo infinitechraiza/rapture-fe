@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import nodemailer from "nodemailer";
 import { getApiUrl } from "@/lib/api-url";
-
 const API_URL = getApiUrl();
+
+function getAuthToken(request: NextRequest): string | null {
+  // Try Authorization header first, then fall back to cookies
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+
+  // Try both possible cookie names
+  return (
+    request.cookies.get("token")?.value ??
+    request.cookies.get("auth_token")?.value ??
+    null
+  );
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -108,7 +121,6 @@ function generateEventsSectionHTML(selectedEvents: DayEvent[]) {
     eventsByDate.get(dateKey)!.push(ev);
   });
 
-  // COMPACT: Reduced padding from 0 40px 36px to 0 24px 16px
   let eventsHTML = `
     <tr>
       <td style="padding:0 24px 16px;">
@@ -126,14 +138,12 @@ function generateEventsSectionHTML(selectedEvents: DayEvent[]) {
         day: "numeric",
       });
 
-      // COMPACT: Reduced margin from 18px 0 to 10px 0
       eventsHTML += `
             <p style="margin:${dateIdx === 0 ? "0" : "10px"} 0 8px;font-size:12px;font-weight:700;color:#00d4ff;">📅 ${formattedEventDate}</p>`;
 
       eventsForDay
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
         .forEach((event) => {
-          // COMPACT: Reduced padding from 16px to 12px, margin-bottom from 12px to 8px
           eventsHTML += `
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(0,180,255,0.08);border:1px solid rgba(0,212,255,0.25);border-radius:10px;margin-bottom:8px;">
               <tr><td style="padding:12px 12px 10px;">
@@ -141,7 +151,6 @@ function generateEventsSectionHTML(selectedEvents: DayEvent[]) {
                 <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.6);">⏱ ${formatTimeDisplay(event.start_time)} – ${formatTimeDisplay(event.end_time)}</p>`;
 
           if (event.comedians && event.comedians.length > 0) {
-            // COMPACT: Reduced margins and padding
             eventsHTML += `
                 <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 0;"></div>
                 <p style="margin:0 0 8px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);">Performers</p>
@@ -162,7 +171,6 @@ function generateEventsSectionHTML(selectedEvents: DayEvent[]) {
                 .toUpperCase();
               const colorIndex = idx % colors.length;
 
-              // COMPACT: Reduced size from 60px to 48px, margin from 8px to 6px
               const imageBlock = comedian.image
                 ? `<img src="${comedian.image}" width="48" height="48" alt="${comedian.name}" style="display:block;width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid rgba(0,212,255,0.35);margin:0 auto 6px;" />`
                 : `<table cellpadding="0" cellspacing="0" style="margin:0 auto 6px;"><tr><td align="center" valign="middle" style="width:48px;height:48px;border-radius:8px;background:${colors[colorIndex]};border:1px solid rgba(255,255,255,0.1);"><span style="color:#fff;font-weight:700;font-size:12px;">${initials}</span></td></tr></table>`;
@@ -221,7 +229,6 @@ async function sendEmails({
     hour12: true,
   });
 
-  // COMPACT: Reduced width from 560px to 480px for better mobile display
   const baseTable = `width="480" cellpadding="0" cellspacing="0" style="background-color:#0d1220;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;"`;
   const neonBar = `  <tr>
                         <td style="height: 4px; background: linear-gradient(90deg, #ff2d9b, #c0157a, #ff2d9b); padding: 0;"></td>
@@ -238,7 +245,6 @@ async function sendEmails({
 
   const eventsHTML = generateEventsSectionHTML(selectedEvents);
 
-  // ── Customer email ──────────────────────────────────────────
   await transporter.sendMail({
     from: `"Rapture Cafe Bar" <${process.env.SMTP_USER}>`,
     to: email,
@@ -252,8 +258,6 @@ async function sendEmails({
     <tr><td align="center">
       <table ${baseTable}>
         ${neonBar}
-
-        <!-- Header -->
         <tr>
           <td align="center" style="padding:28px 24px 18px;">
             <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,45,155,0.12); border: 1px solid rgba(255,255,255,0.15); display: inline-block; line-height: 48px; text-align: center; margin-bottom: 14px;">
@@ -263,25 +267,17 @@ async function sendEmails({
             <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:1px;">Rapture Cafe Bar</h1>
           </td>
         </tr>
-
         ${divider}
-
-        <!-- Body -->
         <tr>
           <td style="padding:20px 24px;">
             <p style="margin:0 0 6px;font-size:15px;font-weight:600;color:#ffffff;">Hey ${name} 👋</p>
             <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.55);">
               We've received your booking request and we're excited to see you! Here are your booking details:
             </p>
-
-            <!-- Details card -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:14px;">
               <tr><td style="padding:16px;">
                 <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">Your booking</p>
-
             ${eventsHTML}
-
-            <!-- Notice box -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:10px;margin-bottom:14px;">
               <tr><td style="padding:12px 16px;">
                 <p style="margin:0 0 2px;font-size:12px;font-weight:700;color:#00d4ff;">📅 What's next?</p>
@@ -290,8 +286,6 @@ async function sendEmails({
                 </p>
               </td></tr>
             </table>
-
-            <!-- Tips box -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;">
               <tr><td style="padding:16px;">
                 <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">Pro tips for a great show</p>
@@ -317,7 +311,6 @@ async function sendEmails({
             </table>
           </td>
         </tr>
-
         ${footer}
       </table>
     </td></tr>
@@ -326,7 +319,6 @@ async function sendEmails({
 </html>`,
   });
 
-  // ── Admin email ─────────────────────────────────────────────
   await transporter.sendMail({
     from: `"Rapture Cafe Bar System" <${process.env.SMTP_USER}>`,
     to: adminEmail,
@@ -340,8 +332,6 @@ async function sendEmails({
     <tr><td align="center">
       <table ${baseTable}>
         ${neonBar}
-
-        <!-- Header -->
         <tr>
           <td align="center" style="padding:28px 24px 18px;">
             <div style="width:48px;height:48px;border-radius:50%;background:rgba(0,212,255,0.12);border:1px solid rgba(255,255,255,0.15);display:inline-block;line-height:48px;text-align:center;margin-bottom:14px;">
@@ -352,18 +342,13 @@ async function sendEmails({
             <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.4);">Admin Notification</p>
           </td>
         </tr>
-
         ${divider}
-
-        <!-- Body -->
         <tr>
           <td style="padding:20px 24px;">
             <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:#ffffff;">New booking submitted 📬</p>
             <p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.55);">
               A new booking has just come in. Review the details below and confirm with the customer.
             </p>
-
-            <!-- Customer details -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:12px;">
               <tr><td style="padding:16px;">
                 <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">Customer Info</p>
@@ -389,8 +374,6 @@ async function sendEmails({
                 </table>
               </td></tr>
             </table>
-
-            <!-- Booking details -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:14px;">
               <tr><td style="padding:16px;">
                 <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">Booking Details</p>
@@ -412,11 +395,9 @@ async function sendEmails({
                 </table>
               </td></tr>
             </table>
-
             ${
               selectedEvents.length > 0
                 ? `
-            <!-- Selected Events -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:14px;">
               <tr><td style="padding:16px;">
                 <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);">🎭 Selected Events (${selectedEvents.length})</p>
@@ -476,8 +457,6 @@ async function sendEmails({
             `
                 : ""
             }
-
-            <!-- Alert box -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:10px;">
               <tr><td style="padding:12px 16px;">
                 <p style="margin:0 0 2px;font-size:12px;font-weight:700;color:#00d4ff;">⚡ Action required</p>
@@ -488,7 +467,6 @@ async function sendEmails({
             </table>
           </td>
         </tr>
-
         ${footer}
       </table>
     </td></tr>
@@ -511,8 +489,56 @@ async function parseBody(request: NextRequest) {
   return await request.json();
 }
 
-export async function GET() {
-  return NextResponse.json({ message: "Booking endpoint" });
+// NEW: list the current user's own bookings, forwarding the auth token so
+// Laravel's index() can scope results instead of returning everyone's data.
+export async function GET(request: NextRequest) {
+  try {
+    const token = getAuthToken(request);
+
+    if (!token) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please log in to view your reservations.",
+        },
+        { status: 401 },
+      );
+    }
+
+    if (!API_URL) {
+      return NextResponse.json(
+        { success: false, message: "NEXT_PUBLIC_API_URL is not configured." },
+        { status: 500 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
+
+    const res = await fetch(`${API_URL}/api/booking${qs ? `?${qs}` : ""}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      cache: "no-store",
+    });
+
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: res.status });
+  } catch (error) {
+    console.error("Booking list proxy error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to load your reservations.",
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -555,11 +581,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // FIX: forward the auth token so Laravel's store() can attach user_id.
+    // Without this, bookings had no owner and could never be scoped back
+    // to a user in the reservations list.
+    const token = getAuthToken(request);
+
     const response = await fetch(`${API_URL}/api/booking`, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
       },
       body: JSON.stringify({
         name,
@@ -601,13 +633,6 @@ export async function POST(request: NextRequest) {
       console.log(`📧 Emails sent to ${email} and admin`);
     } catch (emailErr: any) {
       console.error("Email sending failed:", emailErr?.message || emailErr);
-      console.error("SMTP config:", {
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS ? "SET" : "NOT SET",
-        admin: process.env.ADMIN_EMAIL,
-      });
     }
 
     return NextResponse.json(

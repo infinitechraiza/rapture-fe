@@ -11,6 +11,8 @@ import {
   Clock,
   Users,
   Check,
+  Pencil,
+  Loader2,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +60,7 @@ type Comedian = {
   name: string;
   tagline?: string | null;
   image?: string | null;
+  image_url?: string | null;
   genre?: string | null;
   status: "active" | "inactive";
 };
@@ -68,12 +71,66 @@ function getDaysInMonth(year: number, month: number) {
 function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
-function formatTime(t: string) {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+
+function formatTime(time: string) {
+  if (!time) return "";
+  const [hours, minutes] = time
+    .split(":")
+    .map((element: string) => String(Number(element)));
+
+  let h = parseInt(hours, 10);
+
+  h = h % 12;
+  h = h === 0 ? 12 : h;
+  
+
+ const period = h <= 12 ? "AM" : "PM";
+ if(period === "PM" && h !== 12) {
+  h += 12;
+ }
+   if (h === 24 && minutes === "00") {
+    return "12:00:00";
+  } else if (h === 24) {
+    return `${24}:${minutes}`;
+  }
+
+  return `${h.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")} ${period}`;
+}
+
+
+
+
+// Native <input type="time"> only accepts strict 24-hour "HH:MM" (optionally
+// ":SS") with no AM/PM text — anything else and the browser just renders it
+// blank ("--:-- --"). Records saved before the backend time-format fix may
+// still have a value like "00:00:00 AM" sitting in the database, so this
+// normalizes whatever comes back from the API (24-hour OR legacy 12-hour with
+// AM/PM) into the exact format the input needs.
+function normalizeTimeForInput(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+
+  // 12-hour with AM/PM, seconds optional: "12:00:00 AM", "1:05 PM"
+  const twelveHour = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+  if (twelveHour) {
+    let h = parseInt(twelveHour[1], 10);
+    const m = twelveHour[2];
+    const period = twelveHour[3].toUpperCase();
+    if (period === "AM") {
+      if (h === 12) h = 0;
+    } else if (h !== 12) {
+      h += 12;
+    }
+    return `${String(h).padStart(2, "0")}:${m}`;
+  }
+
+  // Already 24-hour, seconds optional: "00:00:00", "13:05"
+  const twentyFourHour = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (twentyFourHour) {
+    return `${twentyFourHour[1].padStart(2, "0")}:${twentyFourHour[2]}`;
+  }
+
+  return ""; // unrecognized format — leave blank rather than feed the input garbage
 }
 function getInitials(name: string) {
   return name
@@ -83,6 +140,28 @@ function getInitials(name: string) {
     .toUpperCase()
     .slice(0, 2);
 }
+
+// Converts a native <input type="time"> value ("HH:MM", 24-hour, no seconds)
+// into the "h:i:s A" format the backend's update() validator requires, e.g.
+// "00:00" -> "12:00:00 AM", "13:05" -> "01:05:00 PM", "09:00" -> "09:00:00 AM".
+// This is the payload conversion — formatTime() above is only for display.
+
+function toApiTime(time24: string): string {
+  if (!time24) return "";
+
+  const [hours, minutes] = time24.split(":");
+
+  let h = parseInt(hours, 10);
+
+  h = h % 24;
+  h = h === 0 ? 24 : h;
+
+  if (hours === "24") {
+    return `${(24).toString().padStart(2, "0")}:${minutes}:00`;
+  }
+  return `${h.toString().padStart(2, "0")}:${minutes}:00`;
+}
+
 
 function SlidePanel({
   open,
@@ -332,6 +411,7 @@ function ComedianMultiSelect({
           >
             {comedians.map((c) => {
               const checked = selectedIds.includes(c.id);
+              const comedianImg = c.image_url || c.image;
               return (
                 <button
                   key={c.id}
@@ -352,9 +432,9 @@ function ComedianMultiSelect({
                     transition: "background 0.15s, border-color 0.15s",
                   }}
                 >
-                  {c.image ? (
+                  {comedianImg ? (
                     <img
-                      src={c.image}
+                      src={comedianImg}
                       alt={c.name}
                       style={{
                         width: 26,
@@ -470,6 +550,8 @@ function NewEventModal({
   submitting,
   serverError,
   defaultDate,
+  mode = "create",
+  initialEvent,
 }: {
   open: boolean;
   onClose: () => void;
@@ -477,7 +559,11 @@ function NewEventModal({
   submitting: boolean;
   serverError: string | null;
   defaultDate?: string;
+  mode?: "create" | "edit";
+  initialEvent?: CalendarEvent | null;
 }) {
+  const isEdit = mode === "edit";
+
   const [form, setForm] = useState<EventForm>(EMPTY_FORM);
   const [errors, setErrors] = useState<
     Partial<Record<keyof EventForm, string>>
@@ -498,16 +584,29 @@ function NewEventModal({
 
   useEffect(() => {
     if (open) {
-      setForm((p) => ({
-        ...EMPTY_FORM,
-        event_date: defaultDate ?? p.event_date,
-      }));
+      if (isEdit && initialEvent) {
+        setForm({
+          title: initialEvent.title,
+          event_date: initialEvent.event_date?.split("T")[0] ?? "",
+          start_time: normalizeTimeForInput(initialEvent.start_time),
+          end_time: normalizeTimeForInput(initialEvent.end_time),
+          color: initialEvent.color || DEFAULT_COLOR,
+          description: initialEvent.description ?? "",
+          comedian_ids: (initialEvent.comedians ?? []).map((c) => c.id),
+        });
+        setImagePreview(initialEvent.image_url || null);
+      } else {
+        setForm((p) => ({
+          ...EMPTY_FORM,
+          event_date: defaultDate ?? p.event_date,
+        }));
+        setImagePreview(null);
+      }
       setErrors({});
       setImageFile(null);
-      setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }, [open, defaultDate]);
+  }, [open, defaultDate, isEdit, initialEvent]);
 
   useEffect(() => {
     if (!open) return;
@@ -598,7 +697,7 @@ function NewEventModal({
       open={open}
       onClose={handleClose}
       width={460}
-      glowColor="rgba(0,212,255,0.15)"
+      glowColor={isEdit ? "rgba(185,79,255,0.15)" : "rgba(0,212,255,0.15)"}
     >
       <div
         style={{
@@ -614,14 +713,22 @@ function NewEventModal({
               width: 38,
               height: 38,
               borderRadius: 10,
-              background: "rgba(0,212,255,0.12)",
-              border: "1px solid rgba(0,212,255,0.3)",
+              background: isEdit
+                ? "rgba(185,79,255,0.12)"
+                : "rgba(0,212,255,0.12)",
+              border: isEdit
+                ? "1px solid rgba(185,79,255,0.3)"
+                : "1px solid rgba(0,212,255,0.3)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Calendar size={16} style={{ color: "var(--neon-blue)" }} />
+            {isEdit ? (
+              <Pencil size={16} style={{ color: "#b94fff" }} />
+            ) : (
+              <Calendar size={16} style={{ color: "var(--neon-blue)" }} />
+            )}
           </div>
           <div>
             <h3
@@ -632,10 +739,12 @@ function NewEventModal({
                 color: "var(--text-bright)",
               }}
             >
-              New Event
+              {isEdit ? "Edit Event" : "New Event"}
             </h3>
             <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
-              Saved directly to the database
+              {isEdit
+                ? "Update this event's details"
+                : "Saved directly to the database"}
             </p>
           </div>
         </div>
@@ -736,7 +845,11 @@ function NewEventModal({
                 fontWeight: 600,
               }}
             >
-              {imageFile ? imageFile.name : "Choose file"}
+              {imageFile
+                ? imageFile.name
+                : isEdit
+                  ? "Replace file"
+                  : "Choose file"}
             </button>
             <input
               ref={fileInputRef}
@@ -913,17 +1026,25 @@ function NewEventModal({
             borderRadius: 10,
             cursor: "pointer",
             border: "none",
-            background:
-              "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
+            background: isEdit
+              ? "linear-gradient(135deg, #b94fff, var(--neon-pink))"
+              : "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
             color: "#fff",
             fontSize: 13,
             fontWeight: 700,
             letterSpacing: 0.8,
-            boxShadow: "0 0 20px rgba(0,212,255,0.3)",
+            boxShadow: isEdit
+              ? "0 0 20px rgba(185,79,255,0.3)"
+              : "0 0 20px rgba(0,212,255,0.3)",
             opacity: submitting ? 0.6 : 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
           }}
         >
-          {submitting ? "Saving…" : "Save Event"}
+          {submitting && <Loader2 size={14} className="animate-spin" />}
+          {submitting ? "Saving…" : isEdit ? "Save Changes" : "Save Event"}
         </button>
       </div>
     </SlidePanel>
@@ -938,6 +1059,7 @@ function DayDetailPanel({
   onDelete,
   busyId,
   onAddForDay,
+  onEdit,
 }: {
   open: boolean;
   onClose: () => void;
@@ -946,6 +1068,7 @@ function DayDetailPanel({
   onDelete: (id: number) => void;
   busyId: number | null;
   onAddForDay: () => void;
+  onEdit: (event: CalendarEvent) => void;
 }) {
   return (
     <SlidePanel
@@ -1032,7 +1155,7 @@ function DayDetailPanel({
       </button>
 
       {/* Event list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {events
           .slice()
           .sort((a, b) => a.start_time.localeCompare(b.start_time))
@@ -1042,83 +1165,151 @@ function DayDetailPanel({
             return (
               <div
                 key={ev.id}
+                className="group"
                 style={{
+                  position: "relative",
                   borderRadius: 14,
-                  background: "rgba(0,0,0,0.25)",
+                  overflow: "hidden",
                   border: `1px solid ${color}33`,
                   borderLeft: `3px solid ${color}`,
-                  overflow: "hidden",
+                  height: 230,
+                  background: ev.image_url ? "var(--card-mid)" : `${color}14`,
                 }}
               >
-                {/* Event image */}
-                {ev.image_url && (
+                {/* Image sized to fill the entire card */}
+                {ev.image_url ? (
+                  <img
+                    src={ev.image_url}
+                    alt={ev.title}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
                   <div
                     style={{
-                      width: "100%",
-                      height: 130,
-                      overflow: "hidden",
-                      background: "rgba(0,0,0,0.4)",
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <img
-                      src={ev.image_url}
-                      alt={ev.title}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                    />
+                    <Calendar size={30} style={{ color, opacity: 0.35 }} />
                   </div>
                 )}
 
-                <div style={{ padding: 16 }}>
-                  <div
+                {/* Edit / Delete icon buttons — appear on hover */}
+                <div
+                  className="opacity-0 group-hover:opacity-100"
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    zIndex: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    transition: "opacity 0.2s",
+                  }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(ev);
+                    }}
+                    title="Edit event"
+                    className="w-7 h-7 rounded-md flex items-center justify-center"
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      gap: 8,
+                      background: "#b94fff",
+                      color: "#fff",
+                      border: "none",
+                      cursor: "pointer",
                     }}
                   >
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: "var(--text-bright)",
-                      }}
-                    >
-                      {ev.title}
-                    </p>
-                    <button
-                      disabled={busy}
-                      onClick={() => onDelete(ev.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 5,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: "5px 9px",
-                        borderRadius: 8,
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        background: "rgba(255,45,155,0.1)",
-                        border: "1px solid rgba(255,45,155,0.3)",
-                        color: "var(--neon-pink)",
-                        opacity: busy ? 0.5 : 1,
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(ev.id);
+                    }}
+                    title="Delete event"
+                    className="w-7 h-7 rounded-md flex items-center justify-center"
+                    style={{
+                      background: "var(--neon-pink, #ff2d9b)",
+                      color: "#fff",
+                      border: "none",
+                      cursor: busy ? "not-allowed" : "pointer",
+                      opacity: busy ? 0.5 : 1,
+                    }}
+                  >
+                    {busy ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                  </button>
+                </div>
+
+                {/* Status/color chip, top-left */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    left: 8,
+                    zIndex: 10,
+                    padding: "3px 9px",
+                    borderRadius: 6,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    background: `${color}33`,
+                    color,
+                    border: `1px solid ${color}66`,
+                    backdropFilter: "blur(6px)",
+                  }}
+                >
+                  {formatTime(ev.start_time)}
+                </div>
+
+                {/* Text overlay with gradient shadow background */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 5,
+                    padding: "34px 14px 14px",
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.8) 40%, rgba(0,0,0,0.35) 75%, transparent 100%)",
+                  }}
+                >
                   <p
                     style={{
-                      margin: "6px 0 0",
+                      margin: 0,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#fff",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {ev.title}
+                  </p>
+                  <p
+                    style={{
+                      margin: "4px 0 0",
                       fontSize: 11,
-                      color: "var(--text-soft)",
+                      color: "rgba(255,255,255,0.8)",
                       display: "flex",
                       alignItems: "center",
                       gap: 5,
@@ -1132,63 +1323,66 @@ function DayDetailPanel({
                   {ev.comedians && ev.comedians.length > 0 && (
                     <div
                       style={{
-                        marginTop: 10,
+                        marginTop: 8,
                         display: "flex",
                         flexWrap: "wrap",
                         gap: 6,
                       }}
                     >
-                      {ev.comedians.map((c) => (
-                        <span
-                          key={c.id}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "3px 10px 3px 3px",
-                            borderRadius: 999,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            background: "rgba(0,212,255,0.1)",
-                            color: "var(--neon-blue)",
-                            border: "1px solid rgba(0,212,255,0.2)",
-                          }}
-                        >
-                          {c.image ? (
-                            <img
-                              src={c.image}
-                              alt={c.name}
-                              style={{
-                                width: 18,
-                                height: 18,
-                                borderRadius: "50%",
-                                objectFit: "cover",
-                                flexShrink: 0,
-                              }}
-                            />
-                          ) : (
-                            <span
-                              style={{
-                                width: 18,
-                                height: 18,
-                                borderRadius: "50%",
-                                flexShrink: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background:
-                                  "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
-                                color: "white",
-                                fontSize: 8,
-                                fontWeight: 700,
-                              }}
-                            >
-                              {getInitials(c.name)}
-                            </span>
-                          )}
-                          {c.name}
-                        </span>
-                      ))}
+                      {ev.comedians.map((c) => {
+                        const comedianImg = c.image_url || c.image;
+                        return (
+                          <span
+                            key={c.id}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "3px 10px 3px 3px",
+                              borderRadius: 999,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              background: "rgba(0,212,255,0.15)",
+                              color: "var(--neon-blue)",
+                              border: "1px solid rgba(0,212,255,0.3)",
+                            }}
+                          >
+                            {comedianImg ? (
+                              <img
+                                src={comedianImg}
+                                alt={c.name}
+                                style={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: "50%",
+                                  objectFit: "cover",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            ) : (
+                              <span
+                                style={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: "50%",
+                                  flexShrink: 0,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  background:
+                                    "linear-gradient(135deg, var(--neon-blue), var(--neon-purple))",
+                                  color: "white",
+                                  fontSize: 8,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {getInitials(c.name)}
+                              </span>
+                            )}
+                            {c.name}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -1196,9 +1390,13 @@ function DayDetailPanel({
                     <p
                       style={{
                         margin: "8px 0 0",
-                        fontSize: 12,
-                        color: "var(--text-muted)",
+                        fontSize: 11,
+                        color: "rgba(255,255,255,0.7)",
                         lineHeight: 1.5,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
                       }}
                     >
                       {ev.description}
@@ -1227,6 +1425,8 @@ export default function CalendarPage() {
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(
     undefined,
   );
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
@@ -1307,12 +1507,34 @@ export default function CalendarPage() {
   const isoDate = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
+  const openCreateModal = () => {
+    setModalMode("create");
+    setEditingEvent(null);
+    setModalDefaultDate(undefined);
+    setShowModal(true);
+  };
+
+  const openEditModal = (ev: CalendarEvent) => {
+    setModalMode("edit");
+    setEditingEvent(ev);
+    setModalDefaultDate(undefined);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSubmitError(null);
+    setModalMode("create");
+    setEditingEvent(null);
+  };
+
   const handleSubmit = async (
     form: EventForm,
     imageFile: File | null,
   ): Promise<boolean> => {
     setSubmitting(true);
     setSubmitError(null);
+    const isEdit = modalMode === "edit" && !!editingEvent;
     try {
       const formData = new FormData();
       form.comedian_ids.forEach((id) =>
@@ -1320,36 +1542,68 @@ export default function CalendarPage() {
       );
       formData.append("title", form.title);
       formData.append("event_date", form.event_date);
-      formData.append("start_time", form.start_time);
-      formData.append("end_time", form.end_time);
+      // store() still validates start/end time as native "H:i" (24-hour, no
+      // seconds), but update() validates "h:i:s A" (12-hour, with seconds and
+      // AM/PM) — so only convert the payload when this is an edit.
+      formData.append(
+        "start_time",
+        isEdit ? toApiTime(form.start_time) : form.start_time,
+      );
+      formData.append(
+        "end_time",
+        isEdit ? toApiTime(form.end_time) : form.end_time,
+      );
       formData.append("color", form.color || DEFAULT_COLOR);
       if (form.description) formData.append("description", form.description);
       if (imageFile) formData.append("image", imageFile);
 
-      const res = await fetch("/api/event", {
-        method: "POST",
+      // Laravel/PHP only auto-parses multipart bodies for POST requests — a real
+      // PUT with FormData leaves the backend unable to read the fields (and can
+      // blow up trying to json_decode the raw multipart body instead). So for
+      // edits we keep the request as POST and use Laravel's method-spoofing
+      // field to route it to the update handler.
+      const url = isEdit ? `/api/event/${editingEvent!.id}` : "/api/event";
+      const method = isEdit ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method: method, // POST for new, PUT for edit
         body: formData, // no Content-Type header — browser sets the multipart boundary
       });
-      const data = await res.json();
+
+      let data: any;
+      const rawText = await res.text();
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        throw new Error(
+          `Server returned a non-JSON response (status ${res.status}). ${rawText.slice(0, 200)}`,
+        );
+      }
       if (!res.ok || data.success === false) {
         const msg = data.errors
           ? Object.values(data.errors).flat().join(" ")
-          : data.message || "Failed to create event.";
+          : data.message || `Failed to ${isEdit ? "update" : "create"} event.`;
         throw new Error(msg);
       }
       toast({
-        title: "Event created!",
-        description: `${form.title} has been added to your calendar.`,
+        title: isEdit ? "Event updated!" : "Event created!",
+        description: isEdit
+          ? `${form.title} has been updated.`
+          : `${form.title} has been added to your calendar.`,
       });
       await loadEvents();
       setShowModal(false);
+      setModalMode("create");
+      setEditingEvent(null);
       return true;
     } catch (err) {
       const errorMsg =
-        err instanceof Error ? err.message : "Failed to create event.";
+        err instanceof Error
+          ? err.message
+          : `Failed to ${isEdit ? "update" : "create"} event.`;
       setSubmitError(errorMsg);
       toast({
-        title: "Failed to create event",
+        title: `Failed to ${isEdit ? "update" : "create"} event`,
         description: errorMsg,
         variant: "destructive",
       });
@@ -1417,10 +1671,7 @@ export default function CalendarPage() {
           </p>
         </div>
         <button
-          onClick={() => {
-            setModalDefaultDate(undefined);
-            setShowModal(true);
-          }}
+          onClick={openCreateModal}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
           style={{
             background:
@@ -1513,6 +1764,8 @@ export default function CalendarPage() {
                   if (dayEvents?.length) setActiveDay(day);
                   else {
                     setModalDefaultDate(isoDate(day));
+                    setModalMode("create");
+                    setEditingEvent(null);
                     setShowModal(true);
                   }
                 }}
@@ -1635,14 +1888,13 @@ export default function CalendarPage() {
 
       <NewEventModal
         open={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setSubmitError(null);
-        }}
+        onClose={closeModal}
         onSubmit={handleSubmit}
         submitting={submitting}
         serverError={submitError}
         defaultDate={modalDefaultDate}
+        mode={modalMode}
+        initialEvent={editingEvent}
       />
 
       <DayDetailPanel
@@ -1654,8 +1906,14 @@ export default function CalendarPage() {
         busyId={busyId}
         onAddForDay={() => {
           if (activeDay) setModalDefaultDate(isoDate(activeDay));
+          setModalMode("create");
+          setEditingEvent(null);
           setActiveDay(null);
           setShowModal(true);
+        }}
+        onEdit={(ev) => {
+          setActiveDay(null);
+          openEditModal(ev);
         }}
       />
     </div>

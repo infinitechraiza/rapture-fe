@@ -15,6 +15,8 @@ import {
   Sparkles,
   Mail,
 } from "lucide-react";
+import RaptureLogo from "@/app/rapture_logo.png";
+import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -777,7 +779,7 @@ export default function AdminBooking() {
             boxShadow: "0 0 20px rgba(0,212,255,0.4)",
           }}
         >
-          <Stethoscope size={22} style={{ color: "#fff" }} />
+          <Image src={RaptureLogo} alt="Rapture Logo" width={32} height={32} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p

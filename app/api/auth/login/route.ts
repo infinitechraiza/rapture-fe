@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, password, rememberMe } = body
 
-
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         email,
         password,
-        remember_me: rememberMe || false, // Match backend parameter name
+        remember_me: rememberMe || false,
       }),
     })
 
@@ -29,28 +28,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(data, { status: response.status })
     }
 
-    // Store token in httpOnly cookie
-    if (data.data?.token) {
-      const cookieStore = await cookies()
-      const maxAge = rememberMe
-        ? 60 * 60 * 24 * 30 // 30 days if remember me
-        : 60 * 60 * 24 * 7  // 7 days default
+    // FIX: the token wasn't always found at data.data.token — different
+    // Laravel response shapes put it in different places. Check the
+    // common variants so the cookie reliably gets set regardless of
+    // exactly how the backend nests it.
+    const token: string | undefined =
+      data?.data?.token ??
+      data?.token ??
+      data?.data?.access_token ??
+      data?.access_token
 
-      cookieStore.set('auth_token', data.data.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: maxAge,
-        path: '/',
-      })
-
+    if (!token) {
+      console.error('Login succeeded but no token found in response:', data)
+      return NextResponse.json(
+        { success: false, message: 'Login succeeded but no token was returned by the server.' },
+        { status: 500 },
+      )
     }
+
+    const cookieStore = await cookies()
+    const maxAge = rememberMe
+      ? 60 * 60 * 24 * 30 // 30 days if remember me
+      : 60 * 60 * 24 * 7  // 7 days default
+
+    cookieStore.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: maxAge,
+      path: '/',
+    })
 
     return NextResponse.json(data)
   } catch (error) {
+    console.error('Login route error:', error)
     return NextResponse.json(
       { success: false, message: 'Server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
