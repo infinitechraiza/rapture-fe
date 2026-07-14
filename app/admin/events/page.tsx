@@ -40,6 +40,7 @@ const EVENT_COLORS = [
   { value: "#ff2d9b", label: "Pink" },
   { value: "#f59e0b", label: "Amber" },
 ];
+
 const DEFAULT_COLOR = EVENT_COLORS[0].value;
 
 type CalendarEvent = {
@@ -47,6 +48,7 @@ type CalendarEvent = {
   user_id?: number | null;
   comedians?: Comedian[];
   title: string;
+  badge: string;
   event_date: string;
   start_time: string;
   end_time: string;
@@ -82,13 +84,12 @@ function formatTime(time: string) {
 
   h = h % 12;
   h = h === 0 ? 12 : h;
-  
 
- const period = h <= 12 ? "AM" : "PM";
- if(period === "PM" && h !== 12) {
-  h += 12;
- }
-   if (h === 24 && minutes === "00") {
+  const period = h <= 12 ? "AM" : "PM";
+  if (period === "PM" && h !== 12) {
+    h += 12;
+  }
+  if (h === 24 && minutes === "00") {
     return "12:00:00";
   } else if (h === 24) {
     return `${24}:${minutes}`;
@@ -96,9 +97,6 @@ function formatTime(time: string) {
 
   return `${h.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")} ${period}`;
 }
-
-
-
 
 // Native <input type="time"> only accepts strict 24-hour "HH:MM" (optionally
 // ":SS") with no AM/PM text — anything else and the browser just renders it
@@ -132,6 +130,7 @@ function normalizeTimeForInput(raw: string | null | undefined): string {
 
   return ""; // unrecognized format — leave blank rather than feed the input garbage
 }
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -145,7 +144,6 @@ function getInitials(name: string) {
 // into the "h:i:s A" format the backend's update() validator requires, e.g.
 // "00:00" -> "12:00:00 AM", "13:05" -> "01:05:00 PM", "09:00" -> "09:00:00 AM".
 // This is the payload conversion — formatTime() above is only for display.
-
 function toApiTime(time24: string): string {
   if (!time24) return "";
 
@@ -161,7 +159,6 @@ function toApiTime(time24: string): string {
   }
   return `${h.toString().padStart(2, "0")}:${minutes}:00`;
 }
-
 
 function SlidePanel({
   open,
@@ -525,6 +522,7 @@ function ComedianMultiSelect({
 
 type EventForm = {
   title: string;
+  badge: string;
   event_date: string;
   start_time: string;
   end_time: string;
@@ -535,6 +533,7 @@ type EventForm = {
 
 const EMPTY_FORM: EventForm = {
   title: "",
+  badge: "",
   event_date: "",
   start_time: "",
   end_time: "",
@@ -587,6 +586,7 @@ function NewEventModal({
       if (isEdit && initialEvent) {
         setForm({
           title: initialEvent.title,
+          badge: initialEvent.badge,
           event_date: initialEvent.event_date?.split("T")[0] ?? "",
           start_time: normalizeTimeForInput(initialEvent.start_time),
           end_time: normalizeTimeForInput(initialEvent.end_time),
@@ -607,6 +607,15 @@ function NewEventModal({
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [open, defaultDate, isEdit, initialEvent]);
+
+  useEffect(() => {
+    if (!form.event_date) {
+      if (form.badge) set("badge", "");
+      return;
+    }
+    const computed = badgeSelect(form.event_date);
+    if (computed !== form.badge) set("badge", computed ?? "");
+  }, [form.event_date]);
 
   useEffect(() => {
     if (!open) return;
@@ -666,6 +675,7 @@ function NewEventModal({
   const validate = () => {
     const e: typeof errors = {};
     if (!form.title.trim()) e.title = "Title is required.";
+    if (!form.badge) e.badge = "Badge is required.";
     if (!form.event_date) e.event_date = "Event date is required.";
     if (!form.start_time) e.start_time = "Start time is required.";
     if (!form.end_time) e.end_time = "End time is required.";
@@ -675,6 +685,44 @@ function NewEventModal({
     setErrors(e);
     return Object.keys(e).length === 0;
   };
+
+  function badgeSelect(eventDateStr: string): string | null {
+    const eventDate = new Date(eventDateStr.split("T")[0] + "T00:00:00");
+    const formattedDate = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`;
+    console.log("formattedDate:", formattedDate);
+
+    // eventDate: Thu Jul 16 2026 00:00:00 GMT+0800 (Philippine Standard Time)
+    console.log("eventDate:", eventDate);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    console.log("today:", today);
+
+    const daysUntil = Math.round(
+      (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    console.log("daysUntil: ", daysUntil);
+
+    // Saturday and Sunday
+    const dayOfWeek = eventDate.getDay();
+
+    // dayOfWeek:  NaN
+    console.log("dayOfWeek: ", dayOfWeek);
+
+    const badge =
+      daysUntil === 0
+        ? "Tonight"
+        : dayOfWeek === 6 && daysUntil > 0 && daysUntil <= 6
+          ? "This Saturday"
+          : dayOfWeek === 0 && daysUntil > 0 && daysUntil <= 6
+            ? "This Sunday"
+            : daysUntil <= 5 && daysUntil > 0
+              ? "Coming Soon"
+              : "Coming Soon";
+
+    console.log(badge);
+    return badge;
+  }
 
   const handleSubmit = async () => {
     if (!validate()) return;
@@ -874,6 +922,26 @@ function NewEventModal({
           />
           {errors.title && <p style={errMsg}>{errors.title}</p>}
         </div>
+
+        <div>
+          <label style={labelStyle}>
+            Badge{" "}
+            <span style={{ color: "var(--neon-pink)" }}>
+              *{form.event_date}
+            </span>
+          </label>
+
+          <input
+            type="text"
+            value={badgeSelect(form.event_date) || form.badge}
+            onChange={(e) => set("badge", e.target.value)}
+            // placeholder="e.g. This Sunday"
+            style={errors.title ? inputErr : inputBase}
+            readOnly
+          />
+          {errors.title && <p style={errMsg}>{errors.title}</p>}
+        </div>
+
         <div>
           <label style={labelStyle}>
             Date <span style={{ color: "var(--neon-pink)" }}>*</span>
@@ -1541,7 +1609,9 @@ export default function CalendarPage() {
         formData.append("comedian_ids[]", String(id)),
       );
       formData.append("title", form.title);
+      formData.append("badge", form.badge);
       formData.append("event_date", form.event_date);
+
       // store() still validates start/end time as native "H:i" (24-hour, no
       // seconds), but update() validates "h:i:s A" (12-hour, with seconds and
       // AM/PM) — so only convert the payload when this is an edit.
@@ -1549,10 +1619,12 @@ export default function CalendarPage() {
         "start_time",
         isEdit ? toApiTime(form.start_time) : form.start_time,
       );
+
       formData.append(
         "end_time",
         isEdit ? toApiTime(form.end_time) : form.end_time,
       );
+
       formData.append("color", form.color || DEFAULT_COLOR);
       if (form.description) formData.append("description", form.description);
       if (imageFile) formData.append("image", imageFile);

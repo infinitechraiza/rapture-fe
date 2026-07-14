@@ -1,51 +1,98 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ChevronDown, ArrowRight, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+
+type CalendarEvent = {
+  id: number;
+  user_id?: number | null;
+  comedians?: Comedian[];
+  title: string;
+  badge: string;
+  event_date: string;
+  start_time: string;
+  end_time: string;
+  color: string;
+  image_url: string;
+  description: string | null;
+};
+
 interface Show {
   title: string;
   description: string;
   image: string;
 }
 
-export const SHOWS = [
-  { id: 1, badge: "Tonight", badgeColor: "linear-gradient(135deg,#ff2d9b,#b94fff)", title: "Drag Extravaganza Night", desc: "The Philippines' most fabulous drag queens — one stage, one unforgettable night.", date: "Mon, June 15", time: "9:00 PM", img: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=900&q=80" },
-  { id: 2, badge: "This Saturday", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Pride Month Closing Party", desc: "An all-day celebration — live acts, parade viewing & electrifying concert.", date: "Sat, June 28", time: "All Day", img: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=900&q=80" },
-  { id: 3, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#b94fff)", title: "DJ Night: Neon Dreams", desc: "House, dance pop & BPM bangers from QC's top LGBTQ+ DJs.", date: "Tue–Sat", time: "10:00 PM – 4:00 AM", img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=900&q=80" },
-  { id: 4, badge: "Weekends", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Rainbow Brunch", desc: "Free-flowing mimosas, bottomless pancakes, and live acoustic sets.", date: "Sat & Sun", time: "11:00 AM – 3:00 PM", img: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=700&q=80" },
-  { id: 5, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Karaoke Chaos Night", desc: "Sing your heart out — prizes for best performance and most dramatic exit.", date: "Every Wednesday", time: "8:00 PM", img: "https://images.unsplash.com/photo-1485872299829-c673f5194813?w=700&q=80" },
-  { id: 6, badge: "Monthly", badgeColor: "linear-gradient(135deg,#ff9d00,#ff2d9b)", title: "Queer Comedy Night", desc: "Stand-up comedy by and for the community. Expect sharp wit and ugly crying.", date: "Last Friday", time: "9:30 PM", img: "https://images.unsplash.com/photo-1496843916299-590492c751f4?w=700&q=80" },
-  { id: 7, badge: "Coming Soon", badgeColor: "rgba(255,200,0,0.9)", title: "Live Band Extravaganza", desc: "Local indie and pop bands perform live in an intimate setting.", date: "Fri, July 5", time: "8:00 PM", img: "https://images.unsplash.com/photo-1501612780327-45045538702b?w=700&q=80" },
-  { id: 8, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Makeup Artist Meet & Greet", desc: "Connect with professional makeup artists, get tips, enjoy special discounts.", date: "Mon & Thu", time: "7:00 PM", img: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=700&q=80" },
-  { id: 9, badge: "Weekends", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Happy Hour Fiesta", desc: "50% off cocktails and appetizers. Perfect for after-work hangouts.", date: "Fri, Sat & Sun", time: "5:00 PM – 8:00 PM", img: "https://images.unsplash.com/photo-1575037614876-c38a4d44f5b8?w=700&q=80" },
-  { id: 10, badge: "Special", badgeColor: "linear-gradient(135deg,#ff9d00,#ff2d9b)", title: "Theater Workshop & Showcase", desc: "Learn from local theater actors and performers, then watch showcases.", date: "Sun, July 12", time: "6:00 PM", img: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=700&q=80" },
-  { id: 11, badge: "Weekly", badgeColor: "linear-gradient(135deg,#00d4ff,#7b2fff)", title: "Battle of the Bands", desc: "Local bands compete on stage for prizes and bragging rights.", date: "Tue & Fri", time: "9:00 PM", img: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=700&q=80" },
-  { id: 12, badge: "Special", badgeColor: "linear-gradient(135deg,#ff9d00,#ff2d9b)", title: "Celebrity Guest Night", desc: "Special performances by international LGBTQ+ artists. Limited tickets.", date: "Sat, July 19", time: "10:00 PM", img: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=700&q=80" },
-];
+interface Comedian {
+  id: number;
+  name: string;
+  tagline: string | null;
+  image: string | null;
+  genre: string | null;
+  bio: string | null;
+  status: "active" | "inactive";
+  created_at?: string;
+}
 
 export default function Shows() {
-  const [filter, setFilter] = useState("All");
+  const [activeTab, setFilter] = useState("All");
   const [page, setPage] = useState(1);
   const itemsPerPage = 6;
+  const [sortedShows, setSortedShows] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null); // State to hold the error message string | null;
+
+  const { user } = useAuth();
+
+  const loadShows = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/event", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json.message || "Failed to load your reservations.");
+      }
+
+      const shows = json?.data?.data || [];
+      console.log(shows);
+
+      const sortedShows = shows.sort((a: any, b: any) => {
+        const dateA = new Date(a.event_date);
+        const dateB = new Date(b.event_date);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      setSortedShows(sortedShows);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load your Shows.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) loadShows();
+    else setLoading(false);
+  }, [user, loadShows]);
 
   const tabs = [
     "All",
-    "Tonight",
-    "Weekly",
-    "Weekends",
-    "Special",
-    "Monthly",
-    "Coming Soon",
+    ...Array.from(
+      new Set(sortedShows.map((show) => show.badge).filter(Boolean)),
+    ),
   ];
 
   const filteredShows =
-    filter === "All"
-      ? SHOWS
-      : SHOWS.filter(
-          (s) =>
-            s.badge === filter ||
-            (filter === "Weekends" && s.badge === "Weekends"),
-        );
+    activeTab === "All"
+      ? sortedShows
+      : sortedShows
+          .filter((show: any) => show.badge)
+          .filter(Boolean)
+          .filter((show) => show.badge === activeTab);
 
   const totalPages = Math.ceil(filteredShows.length / itemsPerPage);
   const paginatedShows = filteredShows.slice(
@@ -63,7 +110,7 @@ export default function Shows() {
             alt="Club stage at night"
             className="w-full h-full object-cover opacity-50"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-[#060614]/80 to-[#060614]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-[#060614]/40 to-[#060614]" />
         </div>
 
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
@@ -140,7 +187,7 @@ export default function Shows() {
                 setPage(1);
               }}
               className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all border ${
-                filter === tab
+                activeTab === tab
                   ? "bg-white/10 border-[var(--neon-blue)] text-white shadow-[0_0_15px_rgba(0,212,255,0.2)]"
                   : "bg-transparent border-white/10 text-white/60 hover:text-white hover:border-white/30"
               }`}
@@ -152,49 +199,51 @@ export default function Shows() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16 min-h-[400px]">
-          {paginatedShows.map((show) => (
-            <motion.div
-              key={show.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
-              className="group relative h-[360px] rounded-2xl overflow-hidden border border-white/10 cursor-pointer neon-border hover-glow"
-            >
-              <img
-                src={show.img}
-                alt={show.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-md text-xs font-bold text-white shadow-lg backdrop-blur-sm"
-                style={{ background: show.badgeColor }}
+          {paginatedShows
+            .filter((show) => show.badge != "")
+            .map((show) => (
+              <motion.div
+                key={show.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="group relative h-[360px] rounded-2xl overflow-hidden border border-white/10 cursor-pointer neon-border hover-glow"
               >
-                {show.badge}
-              </div>
+                <img
+                  src={show.image_url}
+                  alt={show.title}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
 
-              {/* Hover overlay that slides up */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#060614] via-[#060614]/80 to-transparent translate-y-8 group-hover:translate-y-0 opacity-80 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
-                <h3 className="text-2xl font-black mb-2 text-white leading-tight">
-                  {show.title}
-                </h3>
-                <div className="flex items-center gap-3 text-sm text-[var(--neon-blue)] font-bold mb-3">
-                  <span>{show.date}</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-pink)]" />
-                  <span>{show.time}</span>
-                </div>
-                <p className="text-sm text-white/80 line-clamp-3 mb-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
-                  {show.desc}
-                </p>
-                <Link
-                  href="/contact"
-                  className="w-fit text-xs font-bold uppercase tracking-widest text-[var(--neon-pink)] hover:text-white transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-150"
+                <div
+                  className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-md text-xs font-bold text-white shadow-lg backdrop-blur-sm"
+                  style={{ background: show.color }}
                 >
-                  Book This Event <ArrowRight size={14} />
-                </Link>
-              </div>
-            </motion.div>
-          ))}
+                  {show.badge}
+                </div>
+
+                {/* Hover overlay that slides up */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#060614] via-[#060614]/80 to-transparent translate-y-8 group-hover:translate-y-0 opacity-80 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
+                  <h3 className="text-2xl font-black mb-2 text-white leading-tight">
+                    {show.title}
+                  </h3>
+                  <div className="flex items-center gap-3 text-sm text-[var(--neon-blue)] font-bold mb-3">
+                    <span>{show.event_date}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-pink)]" />
+                    <span>{show.start_time}</span>
+                  </div>
+                  <p className="text-sm text-white/80 line-clamp-3 mb-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                    {show.description}
+                  </p>
+                  <Link
+                   href={`/booking?show=${show.id}`}
+                    className="w-fit text-xs font-bold uppercase tracking-widest text-[var(--neon-pink)] hover:text-white transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-150"
+                  >
+                    Book This Event <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </motion.div>
+            ))}
           {paginatedShows.length === 0 && (
             <div className="col-span-full py-20 text-center text-white/50 flex flex-col items-center">
               <span className="text-4xl mb-4">🎭</span>

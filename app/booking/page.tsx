@@ -867,6 +867,9 @@ export default function Book() {
   const preselectComedianId = searchParams.get("comedian");
   const appliedPreselectRef = useRef(false);
 
+  const preselectEventId = searchParams.get("show");
+  const appliedEventPreselectRef = useRef(false);
+
   const loadMonthEvents = useCallback(async () => {
     setEventsLoading(true);
     setEventsError(null);
@@ -994,6 +997,44 @@ export default function Book() {
     });
   }, [preselectComedianId, monthEvents, eventsLoading, eventsError, toast]);
 
+  useEffect(() => {
+    if (eventsLoading) return;
+    if (appliedEventPreselectRef.current) return;
+    if (!preselectEventId) return;
+    appliedEventPreselectRef.current = true;
+    if (eventsError) return;
+
+    const cleanedEventId = preselectEventId.replace(/^"+|"+$/g, "");
+    const eventId = Number(cleanedEventId);
+    if (!eventId) return;
+
+    const matchedEvent = monthEvents.find((ev) => ev.id === eventId);
+    if (!matchedEvent) {
+      toast({
+        title: "Event not found",
+        description: "We couldn't find that event — pick any open date below.",
+      });
+      return;
+    }
+
+    const [datePart] = matchedEvent.event_date.split("T");
+    const [y, m, d] = datePart.split("-").map(Number);
+    const eventDate = new Date(y, (m || 1) - 1, d || 1);
+
+    setViewYear(eventDate.getFullYear());
+    setViewMonth(eventDate.getMonth());
+    setSelectedEventIds([matchedEvent.id]);
+    setActiveDate(eventDate);
+    setSelectedDate(eventDate);
+    setSelectedEvents([matchedEvent]);
+    setSelectedTime(nearestSlotAtOrAfter(matchedEvent.end_time));
+
+    toast({
+      title: "Event selected!",
+      description: `"${matchedEvent.title}" on ${formatEventDateDisplay(matchedEvent.event_date)} is already selected for you below.`,
+    });
+  }, [preselectEventId, monthEvents, eventsLoading, eventsError, toast]);
+  
   function go(next: number) {
     setDir(next > step ? 1 : -1);
     setStep(next);
